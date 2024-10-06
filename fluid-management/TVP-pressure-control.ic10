@@ -1,0 +1,47 @@
+# Array: [(NH of: Pipe Analyzer, NH of Turbo Volume Pump, Target pressure kPa), ...]
+put db 0 HASH("PA Volatiles")
+put db 1 HASH("TVP Volatiles")
+put db 2 40000
+put db 3 HASH("PA Oxygen")
+put db 4 HASH("TVP Oxygen")
+put db 5 20000
+put db 6 0 # End of array.
+
+define PFPipeAnalyzer 435685051
+define PFTurboVolumePump 1310794736
+alias index r5
+alias NHPipeAnalyzer r6
+alias NHTurboVolumePump r7
+alias targetPressure r8
+alias currentPressure r1
+
+loop:
+yield
+move index 0
+perEntry:
+get NHPipeAnalyzer db index
+beqz NHPipeAnalyzer loop # End of array.
+add index index 1
+get NHTurboVolumePump db index
+add index index 1
+get targetPressure db index
+add index index 1
+
+sbn PFPipeAnalyzer NHPipeAnalyzer On 1
+lbn currentPressure PFPipeAnalyzer NHPipeAnalyzer Pressure Maximum
+slt r0 currentPressure targetPressure
+sbn PFTurboVolumePump NHTurboVolumePump On r0
+beqz r0 perEntry  # At or above target pressure. Next entry.
+sbn PFTurboVolumePump NHTurboVolumePump Mode 0
+
+# Set pump speed higher if far from target pressure.
+div r0 currentPressure targetPressure
+s db Setting r0
+slt r0 r0 0.75
+mul r0 r0 90
+add r0 r0 10
+sbn PFTurboVolumePump NHTurboVolumePump Setting r0
+
+yield
+j perEntry
+j loop

@@ -1,0 +1,74 @@
+put db 0 HASH("BackBoneHallLight")
+put db 1 HASH("BackBoneMainHallSwitch")
+put db 2 HASH("SouthHallBackBoneLight")
+put db 3 HASH("SouthHallBackBoneSwitch")
+put db 4 HASH("NorthHallBackBoneLight")
+put db 5 HASH("NorthHallBackBoneSwitch")
+put db 6 HASH("StairCaseLight")
+put db 7 HASH("StairCaseSwitch")
+put db 8 HASH("HabLights")
+put db 9 HASH("HabSwitch")
+put db 10 HASH("Wall Light Entrence")
+put db 11 HASH("Switch Entrence Light Switch")
+put db 12 HASH("Landing Pad Light Round (Angled)")
+put db 13 HASH("Landing Pad Switch")
+# End of name hash list.
+put db 14 0
+
+define PFSwitch 321604921
+define PFBatteryLight -1306415132
+define PFLongLight 555215790
+define PFAngledLight 1592905386
+alias NHLightNameHash r8
+alias NHSwitchNameHash r9
+alias State r10
+alias CurrentState r11
+alias time r12
+alias address r0
+move time 0
+start:
+# TODO: Adding a timer function
+add time time 1
+sleep 1
+
+beq time 360 TimerReset
+
+move address 0
+loopLights:
+s db Setting time
+get NHLightNameHash db address
+beqz NHLightNameHash start
+add address address 1
+get NHSwitchNameHash db address
+add address address 1
+
+lbn r1 PFBatteryLight NHLightNameHash On Sum
+# Per light type:
+lbn r2 PFLongLight NHLightNameHash On Sum
+add r1 r1 r2
+# End per light type.
+lbn r2 PFAngledLight NHLightNameHash On Sum
+add r1 r1 r2
+sgt CurrentState r1 0
+lbn r1 PFSwitch NHSwitchNameHash Open Average
+beq r1 CurrentState loopLights
+# Invert states.
+xor State CurrentState 1
+jal setLightAndSwitch
+j loopLights
+
+setLightAndSwitch:
+# Params: LightNameHash, SwitchNameHash, State
+sbn PFSwitch NHSwitchNameHash Open State
+# Per light type:
+sbn PFBatteryLight NHLightNameHash On State
+# End per light type.
+sbn PFLongLight NHLightNameHash On State
+sbn PFAngledLight NHLightNameHash On State
+j ra
+
+TimerReset:
+move time 0
+move State 0
+jal setLightAndSwitch
+j loopLights

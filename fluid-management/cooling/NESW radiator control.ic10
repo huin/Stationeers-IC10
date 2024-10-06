@@ -1,0 +1,70 @@
+alias dDaylightSensor d0  # Required
+alias dWeatherStation d1 # Required
+alias dPACoolant d2 # Required
+define SunriseBearing 90 # Where sun rises degrees.
+define SensorBearing 0 # Sensor 0 azimuth orientation degrees
+define NoStorm 0
+define StormIncoming 1
+define InStorm 2
+
+define minTemperature 279.15 # Kelvin
+define PFExtendRadiator -566775170
+
+sunDown:
+s db Setting 1
+move r0 SunriseBearing
+jal align
+sunDownLoop:
+jal checkWeather
+jal checkTemperature
+l r0 dDaylightSensor Vertical
+blt r0 100 sunUpLoop
+sleep 1
+j sunDownLoop
+
+sunUpLoop:
+jal checkWeather
+jal checkTemperature
+s db Setting 2
+l r0 dDaylightSensor Vertical
+bgt r0 100 sunDown
+l r0 dDaylightSensor Horizontal
+add r0 r0 SensorBearing
+jal align
+sleep 1
+j sunUpLoop
+
+stormLoop:
+sb PFExtendRadiator Open 0
+s db Setting 3
+l r0 dWeatherStation Mode
+beq r0 NoStorm sunUpLoop
+sleep 1
+j stormLoop
+
+checkWeather:
+l r0 dWeatherStation Mode
+beq r0 InStorm stormLoop
+beq r0 NoStorm ra
+l r0 dWeatherStation NextWeatherEventTime
+blt r0 30 stormLoop
+j ra
+
+checkTemperature:
+l r0 dPACoolant Temperature
+sgt r0 r0 minTemperature
+sb PFExtendRadiator Open r0
+j ra
+
+align:
+# param r0 = azimuth
+push r0
+mod r0 r0 360
+sbn PFExtendRadiator HASH("Radiator N") Horizontal r0
+sbn PFExtendRadiator HASH("Radiator S") Horizontal r0
+add r0 r0 90
+mod r0 r0 360
+sbn PFExtendRadiator HASH("Radiator W") Horizontal r0
+sbn PFExtendRadiator HASH("Radiator E") Horizontal r0
+pop r0
+j ra

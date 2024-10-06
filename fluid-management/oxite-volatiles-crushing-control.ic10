@@ -1,0 +1,28 @@
+define PFIceCrusher 443849486
+define PFBigInsulatedTank 1280378227
+define PFFiltration -348054045
+define MaxPressure 55000 # kPA = 55MPa
+
+# It is assumed that there is no limit to nitrogen captured from Oxite.
+# Either vent it, or modify to regulate that pressure as well.
+
+define NHVolatilesCrusher HASH("Volatiles Crusher")
+define NHOxiteCrusher HASH("Oxite Crusher")
+define NHVolatilesTank HASH("Volatiles Tank")
+define NHOxygenTank HASH("Oxygen Tank")
+define NHOxiteFiltration HASH("Oxite Filtration")
+
+loop:
+# Regulate volatiles.
+lbn r0 PFBigInsulatedTank NHVolatilesTank Pressure Maximum
+slt r0 r0 MaxPressure
+sbn PFIceCrusher NHVolatilesCrusher On r0
+
+# Regulate oxygen.
+lbn r0 PFBigInsulatedTank NHOxygenTank Pressure Maximum
+slt r0 r0 MaxPressure
+sbn PFIceCrusher NHOxiteCrusher On r0
+sbn PFFiltration NHOxiteFiltration On r0
+
+yield
+j loop

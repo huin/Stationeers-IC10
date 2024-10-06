@@ -1,0 +1,19 @@
+alias gasSensor d0
+alias cooler d1
+
+define highTemperature 296  # Kelvin
+define lowTemperature 294 # Kelvin
+
+idle:
+s d1 On 0
+l r0 d0 Temperature
+bge r0 highTemperature cooling
+sleep 1
+j idle
+
+cooling:
+s d1 On 1
+l r0 d0 Temperature
+ble r0 lowTemperature idle
+sleep 1
+j cooling
