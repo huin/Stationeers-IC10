@@ -17,6 +17,7 @@ jal align
 sunDownLoop:
 jal checkWeather
 jal checkTemperature
+
 l r0 dDaylightSensor Vertical
 blt r0 100 sunUpLoop
 sleep 1
@@ -51,6 +52,7 @@ blt r0 30 stormLoop
 j ra
 
 checkTemperature:
+s dPACoolant On 1
 l r0 dPACoolant Temperature
 sgt r0 r0 minTemperature
 sb PFExtendRadiator Open r0
