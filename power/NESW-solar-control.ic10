@@ -1,0 +1,109 @@
+alias dSensor d0  # required
+# Where sun rises.
+define SunriseBearing 90
+# Sensor 0 azimuth orientation.
+define SensorBearing 0   # degrees
+
+define SolarPanelFlat 1968102968
+define SolarPanelAngled -1554349863
+define SolarPanelHeavyFlat 1697196770
+define SolarPanelHeavyAngled 930865127
+define SolarPanelDual -539224550
+define SolarPanelHeavyDual -1545574413
+
+sunDown:
+s db Setting 1
+move r0 SunriseBearing
+move r1 0
+jal align
+sunDownLoop:
+l r0 dSensor Activate
+bnez r0 sunUp
+jal updateDisplays
+sleep 1
+j sunDownLoop
+
+sunUp:
+s db Setting 2
+l r0 dSensor Activate
+beqz r0 sunDown
+l r0 dSensor Horizontal
+add r0 r0 SensorBearing
+l r1 dSensor Vertical
+sub r1 90 r1 # r1 = 90 - r1
+jal align
+jal updateDisplays
+yield
+j sunUp
+
+align:
+# subroutine. param r0 = azimuth, r1 = elevation
+push ra
+push r0
+move r2 HASH("Panel N")
+jal alignNamed
+add r0 r0 90
+move r2 HASH("Panel W")
+jal alignNamed
+add r0 r0 90
+move r2 HASH("Panel S")
+jal alignNamed
+add r0 r0 90
+move r2 HASH("Panel E")
+jal alignNamed
+pop r0
+pop ra
+j ra
+
+alignNamed:
+# subroutine. param r0 = azimuth, r1 = elevation, r2 = name hash
+mod r0 r0 360
+sbn SolarPanelDual r2 Horizontal r0
+sbn SolarPanelDual r2 Vertical r1
+sbn SolarPanelHeavyDual r2 Horizontal r0
+sbn SolarPanelHeavyDual r2 Vertical r1
+j ra
+
+updateDisplays:
+# subroutine
+push ra  # remember ra
+move r0 0  # charge rate
+move r1 0 # maximum rate
+move r2 SolarPanelFlat
+jal addPanels
+move r2 SolarPanelAngled
+jal addPanels
+move r2 SolarPanelHeavyFlat
+jal addPanels
+move r2 SolarPanelHeavyAngled
+jal addPanels
+move r2 SolarPanelDual
+jal addPanels
+move r2 SolarPanelHeavyDual
+jal addPanels
+move r4 r0
+move r5 HASH("Panel output")
+jal updateLEDs
+div r4 r0 r1
+mul r4 r4 100
+move r5 HASH("Panel ratio")
+jal updateLEDs
+pop ra
+j ra # return
+
+addPanels:
+# param in: r2 prefab hash, in/out: r0 charge, r1 maximum
+push r3
+lb r3 r2 Charge Sum
+add r0 r0 r3
+lb r3 r2 Maximum Sum
+add r1 r1 r3
+pop r3
+j ra
+
+updateLEDs:
+# Display to all types of LED display, in r4 = value to display, r5 = device name hash.
+sbn -815193061 r5 Setting r4 # LED Display (Small)
+sbn -53151617 r5 Setting r4 # LED Display (Medium)
+sbn -1949054743 r5 Setting r4 # LED Display (Large)
+j ra
