@@ -8,24 +8,29 @@ define NHVolatilesPressurized HASH("Volatiles Pressurized")
 define NHOxygenPressurized HASH("Oxygen Pressurized")
 define NHVolatilesReservoir HASH("Volatiles Reservoir")
 define NHOxygenReservoir HASH("Oxygen Reservoir")
-define gasConstant 8.3144626 # (R - ideal gas constant / 1000 for kPa)
+define gasConstant 8.3144626 # R: ideal gas constant ( / 1000 for _k_Pa).
 define pressurizedVolume 250 # Litres
 alias pressurizedMoles r7 # moles
 alias pressurizedTemperature r8 # Kelvin
 alias reservoirPressure r9 # kPa
 alias reservoirTemperature r10 # Kelvin
-alias pressurizedVolPressure r11 # kPa
-alias pressurizedOxyPressure r12 # kPa
-alias enginePassedMoles r13 # moles
-alias pressureSum r14 # kPa
-define targetVolPressure 50000 # kPa
-define targetOxyPressure 25000 # kPa
+alias enginePassedMoles r11 # moles
+alias engineOn r12 # 0|1
+alias volPressureSetting db
+define oxyVolRatio 0.5
+alias targetVolPressure r13 # kPa
+alias targetOxyPressure r14 # kPa
 loop:
-lbn pressurizedVolPressure PFGasCapsuleSmall NHVolatilesPressurized Pressure Maximum
-lbn pressurizedOxyPressure PFGasCapsuleSmall NHOxygenPressurized Pressure Maximum
-add pressureSum pressurizedVolPressure pressurizedOxyPressure
 yield
+l targetVolPressure volPressureSetting Setting
+bnez targetVolPressure acceptPressureSetting
+# Default target volatiles pressure.
+move targetVolPressure 55000
+s volPressureSetting Setting targetVolPressure
+acceptPressureSetting:
+mul targetOxyPressure targetVolPressure oxyVolRatio
 lb enginePassedMoles PFPressureFedGasEngine PassedMoles Sum
+lb engineOn PFPressureFedGasEngine On Minimum
 # ----- Maintain volatiles pressure.
 lbn pressurizedMoles PFGasCapsuleSmall NHVolatilesPressurized TotalMoles Maximum
 lbn pressurizedTemperature PFGasCapsuleSmall NHVolatilesPressurized Temperature Maximum
@@ -35,14 +40,10 @@ lbn reservoirTemperature PFGasCapsuleMedium NHVolatilesReservoir Temperature Max
 mul r1 pressurizedTemperature gasConstant # r1 = T * R
 mul r0 targetVolPressure pressurizedVolume # r0 = P * V
 div r0 r0 r1 # n = P * V / (T * R)
-s db Setting r0
 sub r0 r0 pressurizedMoles # target - current = to add
 # Add more moles assuming that the engine will consume the same rate.
-beqz pressureSum skipEngineVol # Skip if unpressurized (avoid NaN).
-div r1 pressurizedVolPressure pressureSum
-mul r1 r1 enginePassedMoles # r1 = moles used by engine last tick
+mul r1 0.66666 enginePassedMoles # r1 = moles used by engine last tick
 add r0 r0 r1 # r0 = total to add
-skipEngineVol:
 # How many litres to reach that many moles in one tick? V = n * R * T / P
 mul r0 r0 gasConstant
 mul r0 r0 reservoirTemperature
@@ -50,7 +51,8 @@ div r0 r0 reservoirPressure # r0 = litres/tick
 min r0 r0 10
 max r0 r0 0
 sbn PFVolumePump NHVolatilesPump Setting r0
-sgt r0 r0 0.5 # Shut down volume pump if <= 0.5 litres to pump
+sge r0 r0 0.1 # Volume pump on if >= 0.1 litres to pump or engine on.
+or r0 r0 engineOn
 sbn PFVolumePump NHVolatilesPump On r0
 # ----- Maintain oxygen pressure.
 lbn pressurizedMoles PFGasCapsuleSmall NHOxygenPressurized TotalMoles Maximum
@@ -64,11 +66,8 @@ mul r0 targetOxyPressure pressurizedVolume # r0 = P * V
 div r0 r0 r1 # n = P * V / (T * R)
 sub r0 r0 pressurizedMoles # target - current = to add
 # Add more moles assuming that the engine will consume the same rate.
-beqz pressureSum skipEngineOxy # Skip if unpressurized (avoid NaN).
-div r1 pressurizedOxyPressure pressureSum
-mul r1 r1 enginePassedMoles # r1 = moles used by engine last tick
+mul r1 0.33333 enginePassedMoles # r1 = moles used by engine last tick
 add r0 r0 r1 # r0 = total to add
-skipEngineOxy:
 # How many litres to reach that many moles in one tick? V = n * R * T / P
 mul r0 r0 gasConstant
 mul r0 r0 reservoirTemperature
@@ -76,6 +75,7 @@ div r0 r0 reservoirPressure # r0 = litres/tick
 min r0 r0 10
 max r0 r0 0
 sbn PFVolumePump NHOxygenPump Setting r0
-sgt r0 r0 0.5 # Shut down volume pump if <= 0.5 litres to pump
+sge r0 r0 0.05 # Volume pump on if >= 0.05 litres to pump or engine on.
+or r0 r0 engineOn
 sbn PFVolumePump NHOxygenPump On r0
 j loop
