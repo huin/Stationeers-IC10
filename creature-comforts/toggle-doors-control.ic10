@@ -1,0 +1,46 @@
+put db 0 HASH("LargeGate")
+put db 1 HASH("Gate Lever")
+put db 2 HASH("Blast Door ControlRoom")
+put db 3 HASH("ControlRoomDoorSwitch")
+# End of name hash list.
+put db 4 0
+
+define PFSwitch 321604921
+define PFLargeHangerDoor -1351081801
+define PFBlastDoor 337416191
+alias NHDoor r8
+alias NHSwitch r9
+alias address r0
+alias State r10
+alias CurrentState r11
+
+start:
+yield
+
+move address 0
+loop:
+get NHDoor db address
+beqz NHDoor start
+add address address 1
+get NHSwitch db address
+add address address 1
+
+lbn r1 PFBlastDoor NHDoor Open Sum
+# Per door type:
+lbn r2 PFLargeHangerDoor NHDoor Open Sum
+add r1 r1 r2
+# End per door type.
+sgt CurrentState r1 0
+lbn r1 PFSwitch NHSwitch Open Average
+beq r1 CurrentState loop
+# Invert states.
+xor State CurrentState 1
+jal setLightAndSwitch
+j loop
+
+setLightAndSwitch:
+# Params: NHDoor, NHSwitch, State
+sbn PFSwitch NHSwitch Open State
+sbn PFBlastDoor NHDoor Open State
+sbn PFLargeHangerDoor NHDoor Open State
+j ra
