@@ -1,0 +1,84 @@
+define PFVolumePump -321403609
+define PFGasCapsuleSmall -1385712131
+define PFGasCapsuleMedium -1093860567
+define PFPressureFedGasEngine -624011170
+define NHVolPump HASH("VP Volatiles")
+define NHOxyPump HASH("VP Oxygen")
+define NHVolPressurized HASH("Volatiles Pressurized")
+define NHOxyPressurized HASH("Oxygen Pressurized")
+define NHVolReservoir HASH("Volatiles Reservoir")
+define NHOxyReservoir HASH("Oxygen Reservoir")
+define gasConstant 8.3144626 # R: ideal gas constant ( / 1000 for _k_Pa).
+define pressurizedVolume 250 # Litres
+alias pressurizedMoles r7 # moles
+alias pressurizedTemperature r8 # Kelvin
+alias reservoirPressure r9 # kPa
+alias reservoirTemperature r10 # Kelvin
+alias enginePassedMoles r11 # moles
+alias engineOn r12 # 0|1
+alias targetVolPressure r13 # kPa
+alias targetOxyPressure r14 # kPa
+loop:
+yield
+lbn targetVolPressure PFGasCapsuleSmall NHVolPressurized Setting Average
+lbn targetOxyPressure PFGasCapsuleSmall NHOxyPressurized Setting Average
+brgtz targetVolPressure 3
+move targetVolPressure 55000 # Default target volatiles pressure.
+sbn PFGasCapsuleSmall NHVolPressurized Setting targetVolPressure
+brgtz targetOxyPressure 3
+move targetOxyPressure 27500 # Default target oxygen pressure.
+sbn PFGasCapsuleSmall NHOxyPressurized Setting targetOxyPressure
+lb enginePassedMoles PFPressureFedGasEngine PassedMoles Sum
+lb engineOn PFPressureFedGasEngine On Minimum
+# ----- Maintain volatiles pressure.
+move r3 NHVolPressurized
+move r4 NHVolReservoir
+move r5 NHVolPump
+move r6 targetVolPressure
+jal pressureTank
+# ----- Maintain oxygen pressure.
+move r3 NHOxyPressurized
+move r4 NHOxyReservoir
+move r5 NHOxyPump
+move r6 targetOxyPressure
+jal pressureTank
+sb 808389066 On 1 # Ensure avionics stays on
+lb r0 -1125305264 Ratio Maximum # Read medium battery.
+bgt r0 0.20 normalOperations
+# Shut down non-essentials when battery low.
+sb -2087223687 On 0 # Rocket miner
+sb 2014252591 On 0 # Rocket scanner
+sb 1151864003 On 0 # Cargo Storage Medium
+normalOperations:
+# Enable system according to current orders.
+lb r0 808389066 Mode Minimum
+seq r1 r0 2 # Mining?
+sb -2087223687 On r1
+sge r1 r0 3 # Scanning?
+sb 2014252591 On r1
+j loop
+pressureTank:
+# Params: r3=HASH pressure tank, r4=HASH reservoir tank, r5=HASH of VP, r6=target pressure
+lbn pressurizedMoles PFGasCapsuleSmall r3 TotalMoles Maximum
+lbn pressurizedTemperature PFGasCapsuleSmall r3 Temperature Maximum
+lbn reservoirPressure PFGasCapsuleMedium r4 Pressure Maximum
+lbn reservoirTemperature PFGasCapsuleMedium r4 Temperature Maximum
+# How many moles do we need in pressurized?
+mul r1 pressurizedTemperature gasConstant # r1 = T * R
+mul r0 r6 pressurizedVolume # r0 = P * V
+div r0 r0 r1 # n = P * V / (T * R)
+sub r0 r0 pressurizedMoles # target - current = to add
+# Add more moles assuming that the engine will consume the same rate.
+mul r1 0.66666 enginePassedMoles # r1 = moles used by engine last tick
+add r0 r0 r1 # r0 = total to add
+# How many litres to reach that many moles in one tick? V = n * R * T / P
+mul r0 r0 gasConstant
+mul r0 r0 reservoirTemperature
+div r0 r0 reservoirPressure # r0 = litres/tick
+min r0 r0 10
+max r0 r0 0
+sbn PFVolumePump r5 Setting r0
+sge r0 r0 0.1 # Volume pump on if >= 0.1 litres to pump or engine on.
+or r0 r0 engineOn
+sbn PFVolumePump r5 On r0
+j ra
