@@ -9,7 +9,9 @@ define NHOxyPressurized HASH("Oxygen Pressurized")
 define NHVolReservoir HASH("Volatiles Reservoir")
 define NHOxyReservoir HASH("Oxygen Reservoir")
 define gasConstant 8.3144626 # R: ideal gas constant ( / 1000 for _k_Pa).
-define pressurizedVolume 250 # Litres
+define volPressurizedVolume 250 # Litres
+define oxyPressurizedVolume 250 # Litres
+define maxPressure 550 # kPa * 100
 alias pressurizedMoles r7 # moles
 alias pressurizedTemperature r8 # Kelvin
 alias reservoirPressure r9 # kPa
@@ -21,22 +23,20 @@ alias targetOxyPressure r14 # kPa
 loop:
 yield
 lbn targetVolPressure PFGasCapsuleSmall NHVolPressurized Setting Average
+mul targetVolPressure targetVolPressure maxPressure
 lbn targetOxyPressure PFGasCapsuleSmall NHOxyPressurized Setting Average
-brgtz targetVolPressure 3
-move targetVolPressure 55000 # Default target volatiles pressure.
-sbn PFGasCapsuleSmall NHVolPressurized Setting targetVolPressure
-brgtz targetOxyPressure 3
-move targetOxyPressure 27500 # Default target oxygen pressure.
-sbn PFGasCapsuleSmall NHOxyPressurized Setting targetOxyPressure
+mul targetOxyPressure targetOxyPressure maxPressure
 lb enginePassedMoles PFPressureFedGasEngine PassedMoles Sum
 lb engineOn PFPressureFedGasEngine On Minimum
 # ----- Maintain volatiles pressure.
+move r2 volPressurizedVolume
 move r3 NHVolPressurized
 move r4 NHVolReservoir
 move r5 NHVolPump
 move r6 targetVolPressure
 jal pressureTank
 # ----- Maintain oxygen pressure.
+move r2 oxyPressurizedVolume
 move r3 NHOxyPressurized
 move r4 NHOxyReservoir
 move r5 NHOxyPump
@@ -58,14 +58,15 @@ sge r1 r0 3 # Scanning?
 sb 2014252591 On r1
 j loop
 pressureTank:
-# Params: r3=HASH pressure tank, r4=HASH reservoir tank, r5=HASH of VP, r6=target pressure
+# Params: r2=pressure vol, r3=HASH pressure tank, r4=HASH reservoir tank
+# r5=HASH of VP, r6=target pressure
 lbn pressurizedMoles PFGasCapsuleSmall r3 TotalMoles Maximum
 lbn pressurizedTemperature PFGasCapsuleSmall r3 Temperature Maximum
 lbn reservoirPressure PFGasCapsuleMedium r4 Pressure Maximum
 lbn reservoirTemperature PFGasCapsuleMedium r4 Temperature Maximum
 # How many moles do we need in pressurized?
 mul r1 pressurizedTemperature gasConstant # r1 = T * R
-mul r0 r6 pressurizedVolume # r0 = P * V
+mul r0 r6 r2 # r0 = P * V
 div r0 r0 r1 # n = P * V / (T * R)
 sub r0 r0 pressurizedMoles # target - current = to add
 # Add more moles assuming that the engine will consume the same rate.
