@@ -1,0 +1,15 @@
+define PFRocketMediumGasTank -1093860567
+define PFRocketSmallGasTank -1385712131
+define PFLEDDisplaySmall -815193061
+
+start:
+lbn r0 PFRocketMediumGasTank HASH("Volatiles Reservoir") Pressure Average
+sbn PFLEDDisplaySmall HASH("Volatiles Reservoir") Setting r0
+lbn r0 PFRocketMediumGasTank HASH("Oxygen Reservoir") Pressure Average
+sbn PFLEDDisplaySmall HASH("Oxygen Reservoir") Setting r0
+lbn r0 PFRocketSmallGasTank HASH("Volatiles Pressurized") Pressure Average
+sbn PFLEDDisplaySmall HASH("Volatiles Pressurized") Setting r0
+lbn r0 PFRocketSmallGasTank HASH("Oxygen Pressurized") Pressure Average
+sbn PFLEDDisplaySmall HASH("Oxygen Pressurized") Setting r0
+yield
+j start
