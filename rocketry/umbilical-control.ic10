@@ -1,15 +1,16 @@
 # Array: [(NH of: Pipe Analyzer, NH of Turbo Volume Pump, Target pressure kPa), ...]
 put db 0 HASH("PA Volatiles")
 put db 1 HASH("TVP Volatiles")
-put db 2 40000
+put db 2 55000
 put db 3 HASH("PA Oxygen")
 put db 4 HASH("TVP Oxygen")
-put db 5 20000
+put db 5 27500
 put db 6 0 # End of array.
 
 define PFPipeAnalyzer 435685051
 define PFTurboVolumePump 1310794736
 define PFLever 1220484876
+define leverPulled 1
 
 define NHExtensionLever HASH("Retract Umbilicals")
 define NHPumpDirLever HASH("Drain Umbilicals")
@@ -37,8 +38,9 @@ add index index 1
 
 sbn PFPipeAnalyzer NHPipeAnalyzer On 1
 lbn currentPressure PFPipeAnalyzer NHPipeAnalyzer Pressure Maximum
-bnez mode drainUmbilicals  # Lever out - drain.
+beq mode leverPulled drainUmbilicals  # Lever out - drain.
 fillUmbilicals:
+bgt currentPressure 58000 panicDrain  # Safety drain.
 slt r0 currentPressure targetPressure
 sbn PFTurboVolumePump NHTurboVolumePump On r0
 beqz r0 perEntry  # At or above target pressure. Next entry.
@@ -46,11 +48,15 @@ sbn PFTurboVolumePump NHTurboVolumePump Mode 0
 # Set pump speed higher if far from target pressure.
 div r0 currentPressure targetPressure
 s db Setting r0
-slt r0 r0 0.75
+slt r0 r0 0.80
 mul r0 r0 90
 add r0 r0 10
 sbn PFTurboVolumePump NHTurboVolumePump Setting r0
 j perEntry
+
+panicDrain:
+move mode 1
+sbn PFLever NHPumpDirLever Open mode
 drainUmbilicals:
 sgtz r0 currentPressure
 sbn PFTurboVolumePump NHTurboVolumePump On r0
@@ -62,15 +68,14 @@ j perEntry
 umbilicalControl:
 # Umbilical Open = 1 => connected/extended.
 lbn mode PFLever NHExtensionLever Open Maximum
-xor mode mode 1# invert mode
-s db Setting mode
-sb 1529453938 Open mode  # Power umbilical.
-sb 1529453938 On mode
-sb -1798420047 Open mode # Liquid umbilical.
-sb -1798420047 On mode
-sb -1814939203 Open mode # Gas umbilical.
-sb -1814939203 On mode
-sb -958884053 Open mode # Chute umbilical.
-sb -958884053 On mode
+sne r0 mode leverPulled
+sb 1529453938 Open r0  # Power umbilical.
+sb 1529453938 On r0
+sb -1798420047 Open r0 # Liquid umbilical.
+sb -1798420047 On r0
+sb -1814939203 Open r0 # Gas umbilical.
+sb -1814939203 On r0
+sb -958884053 Open r0 # Chute umbilical.
+sb -958884053 On r0
 yield
 j loop
