@@ -1,0 +1,52 @@
+push HASH("GS Room")
+push HASH("VP Oxygen")
+push HASH("VP Nitrogen")
+alias arrayEnd r15
+move arrayEnd sp
+define PFVP -321403609
+define PFGS -1252983604
+define targetPartialO2 21 # kPa
+define targetPartialN2 84 # kPa
+define maxPressure 120 # kPa
+alias pressure r0
+alias gr0 r1
+alias gr1 r2
+alias nhGS r3
+alias nhVPOxy r4
+alias nhVPNit r5
+loop:
+yield
+move sp arrayEnd
+eachRoom:
+blez sp loop # End of entries?
+pop nhVPNit
+pop nhVPOxy
+pop nhGS
+lbn pressure PFGS nhGS Pressure Average
+bgt pressure maxPressure stopInput
+lbn gr0 PFGS nhGS RatioOxygen Average
+mul gr0 pressure gr0 # Partial Oxygen pressure
+slt gr1 gr0 targetPartialO2
+sbn PFVP nhVPOxy On gr1
+div gr0 gr0 targetPartialO2
+slt gr0 gr0 0.9
+mul gr0 gr0 9
+add gr0 gr0 1
+sbn PFVP nhVPOxy Setting gr0
+lbn gr0 PFGS nhGS RatioNitrogen Average
+mul gr0 pressure gr0 # Partial Nitrogen pressure
+slt gr1 gr0 targetPartialN2
+sbn PFVP nhVPNit On gr1
+div gr0 gr0 targetPartialN2
+slt gr0 gr0 0.9
+mul gr0 gr0 9
+add gr0 gr0 1
+sbn PFVP nhVPNit Setting gr0
+j eachRoom
+
+stopInput:
+sbn PFVP nhVPOxy On 0
+sbn PFVP nhVPNit On 0
+j eachRoom
+yield
+j loop
