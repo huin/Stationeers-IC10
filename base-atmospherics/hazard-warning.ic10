@@ -1,0 +1,83 @@
+define PFGS -1252983604
+define PFKlax -828056979
+define PFSLED -815193061
+define NHRoomIDLED HASH("Room ID")
+define NHAnnouncer HASH("Announcer")
+define NHAlarmSpeaker HASH("Alarm")
+# Room array.
+alias nhRoomGS r15
+push HASH("GSFAB")  #Gas sensor Fabricatino
+push HASH("GSBMAIN") # Gas Sensor Backbone Main Hall
+push HASH("GSBSOUTH")# GAS sensor Back Bone Hall South
+push HASH("GSHABBED1") # Gas sensor Habitation room 1 (huin)
+push HASH("GSHABBED2") # Gas sensor Habitation room 2 (Badger)
+push HASH("GSHAB") # Gas Sensor Hab Hall
+push HASH("GSHABFILTRATION") # Gas Sensor HAB Filtration
+push HASH("GSSTAIRWELL") # Gas sensor Stairwell
+alias roomStart r14 # Start of room array.
+move roomStart sp
+# Gas array.
+alias gasReader r13
+alias gasSpeakerMode r12
+alias gasMaxRatio r11
+push readVolatiles
+push 29 # "One"
+push 0.001
+push readPollutant
+push 43
+push 0.001
+push readCO2
+push 44
+push 0.01
+alias gasStart r10 # Start of gas array.
+move gasStart sp
+alias nextRoomIdx r9 # Stack index.
+alias gasRatio r8
+alias warningOn r7
+alias warningCode r6
+alias warningSpeaker r5
+alias roomID r4
+start:
+sbn PFKlax NHAnnouncer On warningOn
+sbn PFKlax NHAlarmSpeaker On warningOn
+sbn PFKlax NHAnnouncer Mode warningSpeaker
+sbn PFKlax NHAlarmSpeaker Mode 10
+sbn PFSLED NHRoomIDLED On warningOn
+sbn PFSLED NHRoomIDLED Color Color.Red
+sbn PFSLED NHRoomIDLED Setting warningCode
+yield
+move warningOn 0
+move warningCode 0
+move nextRoomIdx roomStart # For each room.
+nextRoom:
+blez nextRoomIdx start
+move roomID nextRoomIdx
+move sp nextRoomIdx
+pop nhRoomGS
+move nextRoomIdx sp
+move sp gasStart # For each gas.
+nextGas:
+ble sp roomStart nextRoom # End of gasses.
+pop gasMaxRatio
+pop gasSpeakerMode
+pop gasReader
+jal gasReader
+blt gasRatio gasMaxRatio nextGas
+# Encountered alert condition.
+move warningOn 1
+move warningSpeaker gasSpeakerMode
+sub r0 sp roomStart # Compute gas code.
+div r0 r0 3 # Compute gas code.
+add r0 r0 1 # Compute gas code.
+mul r0 r0 100
+add warningCode r0 roomID
+j nextGas
+readCO2:
+lbn gasRatio PFGS nhRoomGS RatioCarbonDioxide Average
+j ra
+readPollutant:
+lbn gasRatio PFGS nhRoomGS RatioPollutant Average
+j ra
+readVolatiles:
+lbn gasRatio PFGS nhRoomGS RatioVolatiles Average
+j ra
