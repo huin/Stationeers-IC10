@@ -1,6 +1,8 @@
 define PFGS -1252983604
 define PFKlax -828056979
 define PFSLED -815193061
+define lowPressure 90
+define highPressure 150
 define NHRoomIDLED HASH("Room ID")
 define NHAnnouncer HASH("Announcer")
 define NHAlarmSpeaker HASH("Alarm")
@@ -32,7 +34,7 @@ push 0.01
 alias gasStart r10 # Start of gas array.
 move gasStart sp
 alias nextRoomIdx r9 # Stack index.
-alias gasRatio r8
+alias gasValue r8
 alias warningOn r7
 alias warningCode r6
 alias warningSpeaker r5
@@ -48,21 +50,33 @@ sbn PFSLED NHRoomIDLED Setting warningCode
 yield
 move warningOn 0
 move warningCode 0
-move nextRoomIdx roomStart # For each room.
+move nextRoomIdx roomStart 
 nextRoom:
 blez nextRoomIdx start
 move roomID nextRoomIdx
 move sp nextRoomIdx
 pop nhRoomGS
 move nextRoomIdx sp
-move sp gasStart # For each gas.
+move sp gasStart 
+lbn gasValue PFGS nhRoomGS Pressure Average
+bge gasValue lowPressure checkHighPressure
+add warningCode 1000 roomID
+move warningSpeaker 40
+move warningOn 1
+j nextGas
+checkHighPressure:
+ble gasValue highPressure nextGas
+add warningCode 1100 roomID
+move warningSpeaker 39
+move warningOn 1
+# For each gas.
 nextGas:
 ble sp roomStart nextRoom # End of gasses.
 pop gasMaxRatio
 pop gasSpeakerMode
 pop gasReader
 jal gasReader
-blt gasRatio gasMaxRatio nextGas
+blt gasValue gasMaxRatio nextGas
 # Encountered alert condition.
 move warningOn 1
 move warningSpeaker gasSpeakerMode
@@ -73,11 +87,11 @@ mul r0 r0 100
 add warningCode r0 roomID
 j nextGas
 readCO2:
-lbn gasRatio PFGS nhRoomGS RatioCarbonDioxide Average
+lbn gasValue PFGS nhRoomGS RatioCarbonDioxide Average
 j ra
 readPollutant:
-lbn gasRatio PFGS nhRoomGS RatioPollutant Average
+lbn gasValue PFGS nhRoomGS RatioPollutant Average
 j ra
 readVolatiles:
-lbn gasRatio PFGS nhRoomGS RatioVolatiles Average
+lbn gasValue PFGS nhRoomGS RatioVolatiles Average
 j ra
