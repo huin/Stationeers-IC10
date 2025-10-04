@@ -39,7 +39,6 @@ add index index 1
 sbn PFPipeAnalyzer NHPipeAnalyzer On 1
 lbn currentPressure PFPipeAnalyzer NHPipeAnalyzer Pressure Maximum
 beq mode leverPulled drainUmbilicals  # Lever out - drain.
-fillUmbilicals:
 bgt currentPressure 58000 panicDrain  # Safety drain.
 slt r0 currentPressure targetPressure
 sbn PFTurboVolumePump NHTurboVolumePump On r0
