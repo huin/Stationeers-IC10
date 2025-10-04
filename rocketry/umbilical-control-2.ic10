@@ -1,0 +1,107 @@
+# Array: [(NH of: Pipe Analyzer, NH of Turbo Volume Pump, Target pressure kPa), ...]
+put db 0 HASH("PA Volatiles")
+put db 1 HASH("TVP Volatiles")
+put db 2 55000
+put db 3 HASH("PA Oxygen")
+put db 4 HASH("TVP Oxygen")
+put db 5 27500
+put db 6 0 # End of array.
+
+define PFPipeAnalyzer 435685051
+define PFTurboVolumePump 1310794736
+define PFDial 554524804
+define PFButton 491845673
+define PFSmallLED -815193061
+
+define NHSetting HASH("Umbilical Setting")
+define NHConfirm HASH("Umbilical Confirm")
+define NHDisplay HASH("Umbilical Display")
+
+alias index r5
+alias NHPipeAnalyzer r6
+alias NHTurboVolumePump r7
+alias targetPressure r8
+alias currentPressure r1
+alias mode r2
+alias tmp r9
+alias tmp2 r13
+alias pressureFactor r10
+alias umbilicalSetting r11
+alias modeText r12
+alias running r3
+
+move running 0
+
+loop:
+yield
+sbn PFDial NHSetting Mode 2
+lbn tmp PFButton NHConfirm Setting Maximum
+s db Setting tmp
+beqz tmp skipLoadMode # Load mode if button pressed
+lbn mode PFDial NHSetting Setting Maximum
+skipLoadMode:
+sbn PFSmallLED NHDisplay On 1
+sbn PFSmallLED NHDisplay Mode 10
+sbn PFSmallLED NHDisplay Setting modeText
+select tmp running Color.Yellow Color.Green
+sbn PFSmallLED NHDisplay Color tmp
+# Umbilical Open = 1 => connected/extended.
+sb 1529453938 Open umbilicalSetting  # Power
+sb 1529453938 On umbilicalSetting
+sb -1798420047 Open umbilicalSetting # Liquid
+sb -1798420047 On umbilicalSetting
+sb -1814939203 Open umbilicalSetting # Gas
+sb -1814939203 On umbilicalSetting
+sb -958884053 Open umbilicalSetting # Chute
+sb -958884053 On umbilicalSetting
+beq mode 0 modeDrain
+beq mode 1 modeFill
+beq mode 2 modeRetract
+j loop
+
+modeDrain:
+move pressureFactor 0
+move umbilicalSetting 1
+move modeText STR("Drain")
+j setVolumePumps
+modeFill:
+move pressureFactor 1
+move umbilicalSetting 1
+move modeText STR("Fill")
+j setVolumePumps
+modeRetract:
+move pressureFactor 0
+move umbilicalSetting 0
+move modeText STR("Rtrct")
+yield
+j setVolumePumps
+
+setVolumePumps:
+move running 0
+move index 0
+perEntry:
+get NHPipeAnalyzer db index
+beqz NHPipeAnalyzer loop # End of array
+add index index 1
+get NHTurboVolumePump db index
+add index index 1
+get targetPressure db index
+add index index 1
+sbn PFPipeAnalyzer NHPipeAnalyzer On 1
+mul targetPressure targetPressure pressureFactor
+lbn currentPressure PFPipeAnalyzer NHPipeAnalyzer Pressure Maximum
+# Set TVP direction and speed.
+sub tmp targetPressure currentPressure
+sltz tmp2 tmp
+sbn PFTurboVolumePump NHTurboVolumePump Mode tmp2
+abs tmp tmp
+add tmp tmp 1
+div tmp tmp 2000
+pow tmp tmp 2
+s db Setting tmp
+lerp tmp2 1 100 tmp
+sbn PFTurboVolumePump NHTurboVolumePump Setting tmp2
+sgt tmp2 tmp 0.001
+sbn PFTurboVolumePump NHTurboVolumePump On tmp2
+or running running tmp2
+j perEntry
