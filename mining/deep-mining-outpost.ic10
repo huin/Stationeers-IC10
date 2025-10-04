@@ -1,0 +1,76 @@
+alias dSensor d0  # required
+# Where sun rises.
+define SunriseBearing 90
+# Sensor 0 azimuth orientation.
+define SensorBearing 0   # degrees
+
+define DeepMinerPF 265720906
+define BeaconPF -188177083
+define SiloPF 1155865682
+define StationBatteryPF -400115994
+define DaylightSensorPF 1076425094
+define SolarPanelDualPF -539224550
+define SolarPanelHeavyDualPF -1545574413
+
+sunDown:
+jal powerState
+s db Setting 1
+move r0 SunriseBearing
+move r1 0
+jal align
+sunDownLoop:
+l r0 dSensor Activate
+bnez r0 sunUp
+sleep 1
+j sunDownLoop
+
+sunUp:
+jal powerState
+s db Setting 2
+l r0 dSensor Activate
+beqz r0 sunDown
+l r0 dSensor Horizontal
+add r0 r0 SensorBearing
+l r1 dSensor Vertical
+sub r1 90 r1 # r1 = 90 - r1
+jal align
+yield
+j sunUp
+
+align:
+# subroutine. param r0=azimuth, r1=elevation
+push ra
+push r0
+move r2 HASH("Panel N")
+jal alignNamed
+add r0 r0 90
+move r2 HASH("Panel W")
+jal alignNamed
+add r0 r0 90
+move r2 HASH("Panel S")
+jal alignNamed
+add r0 r0 90
+move r2 HASH("Panel E")
+jal alignNamed
+pop r0
+pop ra
+j ra
+
+alignNamed:
+# subroutine. param r0=azimuth, r1=elevation, r2=name hash
+mod r0 r0 360
+sbn SolarPanelDualPF r2 Horizontal r0
+sbn SolarPanelDualPF r2 Vertical r1
+sbn SolarPanelHeavyDualPF r2 Horizontal r0
+sbn SolarPanelHeavyDualPF r2 Vertical r1
+j ra
+
+powerState:
+# subroutine.
+lb r0 StationBatteryPF Charge Sum
+sgt r1 r0 100000
+sb DeepMinerPF On r1
+sb SiloPF On r1
+sgt r1 r0 50000
+sb BeaconPF On r1
+j ra
