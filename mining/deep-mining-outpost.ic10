@@ -1,4 +1,4 @@
-alias dSensor d0  # required
+alias state r14
 # Where sun rises.
 define SunriseBearing 90
 # Sensor 0 azimuth orientation.
@@ -13,25 +13,27 @@ define SolarPanelDualPF -539224550
 define SolarPanelHeavyDualPF -1545574413
 
 sunDown:
-jal powerState
-s db Setting 1
 move r0 SunriseBearing
 move r1 0
 jal align
 sunDownLoop:
-l r0 dSensor Activate
+move state 0
+jal powerState
+s db Setting state
+lb r0 DaylightSensorPF Activate Maximum
 bnez r0 sunUp
 sleep 1
 j sunDownLoop
 
 sunUp:
+move state 2
 jal powerState
-s db Setting 2
-l r0 dSensor Activate
+s db Setting state
+lb r0 DaylightSensorPF Activate Maximum
 beqz r0 sunDown
-l r0 dSensor Horizontal
+lb r0 DaylightSensorPF Horizontal Average
 add r0 r0 SensorBearing
-l r1 dSensor Vertical
+lb r1 DaylightSensorPF Vertical Average
 sub r1 90 r1 # r1 = 90 - r1
 jal align
 yield
@@ -69,6 +71,7 @@ powerState:
 # subroutine.
 lb r0 StationBatteryPF Charge Sum
 sgt r1 r0 100000
+add state state r1
 sb DeepMinerPF On r1
 sb SiloPF On r1
 sgt r1 r0 50000
