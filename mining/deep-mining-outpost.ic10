@@ -70,10 +70,10 @@ j ra
 powerState:
 # subroutine.
 lb r0 StationBatteryPF Charge Sum
-sgt r1 r0 100000
+sgt r1 r0 500000
 add state state r1
 sb DeepMinerPF On r1
 sb SiloPF On r1
-sgt r1 r0 50000
+sgt r1 r0 100000
 sb BeaconPF On r1
 j ra
