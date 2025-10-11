@@ -1,0 +1,42 @@
+define tvpPF 1310794736
+define gstPF 1632165346
+define canisterPF 42280099
+define smartCanisterPF -668314371
+define tolerance 100 # kPa
+push HASH("TVP Oxygen Filler")
+push HASH("Oxygen Filler")
+# push HASH("TVP Nitrogen Filler")
+# push HASH("Nitrogen Filler")
+alias listStart r15
+move listStart sp
+alias tvpNH r12
+alias gstNH r13
+alias targetPressure r14
+
+loop:
+yield
+move sp listStart
+nextFiller:
+beqz sp loop # Finished looping over fillers.
+pop gstNH
+pop tvpNH
+lbns r0 gstPF gstNH 0 Occupied Minimum
+brnez r0 3
+sbn tvpPF tvpNH On 0
+j nextFiller
+lbns r0 gstPF gstNH 0 OccupantHash Minimum
+seq r0 r0 smartCanisterPF
+select targetPressure r0 19000 9000
+lbn r0 gstPF gstNH Pressure Maximum
+sub r1 targetPressure r0
+s db Setting r1
+abs r2 r1
+sgt r2 r2 tolerance # r2=1 if TVP should be on
+sbn tvpPF tvpNH On r2
+sltz r2 r1 # r2=1 if canister if TVP should reverse
+sbn tvpPF tvpNH Mode r2
+div r1 r1 5000
+mul r1 r1 r1
+lerp r1 1 100 r1
+sbn tvpPF tvpNH Setting r1
+j nextFiller
