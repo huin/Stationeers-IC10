@@ -1,0 +1,42 @@
+define vpDevHash -321403609
+define gstDevHash 1632165346
+define canisterDevHash 42280099
+define smartCanisterDevHash -668314371
+define vpFill1 HASH("VP Oxygen Filler")
+define gstFill1 HASH("Oxygen Filler")
+define vpFill2 HASH("VP Nitrogen Filler")
+define gstFill2 HASH("Nitrogen Filler")
+alias vpHash r10
+alias gstHash r11
+
+loop:
+yield
+move vpHash vpFill1
+move gstHash gstFill1
+jal fill
+fill2:
+move vpHash vpFill2
+move gstHash gstFill2
+jal fill
+j loop
+
+fill:
+lbns r0 gstDevHash gstHash 0 Occupied Minimum
+beqz r0 ra  # No canister to fill
+lbns r0 gstDevHash gstHash 0 OccupantHash Minimum
+move r1 0
+brne r0 canisterDevHash 2
+move r1 9000
+brne r0 smartCanisterDevHash 2
+move r1 19000
+lbns r0 gstDevHash gstHash 0 Pressure Maximum
+sub r1 r1 r0
+s db Setting r1
+sgez r2 r1 # r2 = 1 if canister needs filling.
+sbn vpDevHash vpHash On r2
+beqz r2 ra # Return if canister filled.
+div r1 r1 1000
+mul r1 r1 r1
+lerp r1 0.5 10 r1
+sbn vpDevHash vpHash Setting r1
+j ra
