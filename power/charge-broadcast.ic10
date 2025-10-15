@@ -1,0 +1,35 @@
+# Script that "broadcasts" battery power ratio on
+# all 6 configured devices' (transformers?) output
+# cable networks.
+define LBattery -1388288459
+define Battery -400115994
+
+alias Max r1
+alias Current r2
+alias ChrgRatio r3
+
+Start:
+yield
+lb Max LBattery Maximum Sum #The Max Power Stored
+lb r0 Battery Maximum Sum #The Max Power Stored
+add Max Max r0
+lb Current LBattery Charge Sum #The Actual Power Stored
+lb r0 Battery Charge Sum #The Actual Power Stored
+add Current Current r0
+div ChrgRatio Current Max
+
+s db Setting ChrgRatio
+s db:0 Channel0 ChrgRatio
+brdns d0 2
+s d0:0 Channel0 ChrgRatio
+brdns d1 2
+s d1:0 Channel0 ChrgRatio
+brdns d2 2
+s d2:0 Channel0 ChrgRatio
+brdns d3 2
+s d3:0 Channel0 ChrgRatio
+brdns d4 2
+s d4:0 Channel0 ChrgRatio
+brdns d5 2
+s d5:0 Channel0 ChrgRatio
+j Start

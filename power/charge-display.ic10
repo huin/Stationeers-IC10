@@ -1,0 +1,15 @@
+# For use with charge-broadcast.ic10.
+# Displays power reserve percentage.
+define PFSmallLED -815193061
+define NHSmallLED HASH("LED Power")
+
+Start:
+yield
+l r0 db:0 Channel0
+s db Setting r0
+slt r1 r0 0.20
+select r1 r1 Color.Red Color.Green
+sbn PFSmallLED NHSmallLED Color r1
+sbn PFSmallLED NHSmallLED Mode 1
+sbn PFSmallLED NHSmallLED Setting r0
+j Start
