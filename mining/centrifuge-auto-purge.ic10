@@ -5,6 +5,7 @@
 
 define CENTRIFUGE 690945935
 define FULL 400 #400 is the max held
+alias powerNotLow r11
 alias powerHigh r12
 alias deviceName r15
 alias reagents r14
@@ -22,15 +23,19 @@ move sp 0 #restart stack pointer index
 
 start:
 yield
-l powerHigh db:0 Channel0
-sgt powerHigh powerHigh 0.25
+l r0 db:0 Channel0
+sgt powerNotLow r0 0.25
+sgt powerHigh r0 0.50
 add sp sp 1
 peek deviceName
 #Reset when hit 0
 beqz deviceName reset
 
 checkCentrifuge:
-sbn CENTRIFUGE deviceName On powerHigh
+lbn r0 CENTRIFUGE deviceName On Maximum
+or r0 r0 powerHigh
+and r0 r0 powerNotLow
+sbn CENTRIFUGE deviceName On r0
 lbn reagents CENTRIFUGE deviceName Reagents Minimum
 lbn door CENTRIFUGE deviceName Open Minimum
 s db Setting reagents
