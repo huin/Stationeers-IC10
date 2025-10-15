@@ -1,0 +1,48 @@
+# Modification of Trasiva's auto-purge script.
+# This adds the feature to turn off the centrifuges
+# if the power is low (as indicated by Channel0).
+# For use with charge-broadcast.ic10.
+
+define CENTRIFUGE 690945935
+define FULL 400 #400 is the max held
+alias powerHigh r12
+alias deviceName r15
+alias reagents r14
+alias door r13
+
+#Save centrifuge names, add more as necessary
+push HASH("Centrifuge 1")
+push HASH("Centrifuge 2")
+push HASH("Centrifuge 3")
+push HASH("Centrifuge 4")
+push 0
+
+reset:
+move sp 0 #restart stack pointer index
+
+start:
+yield
+l powerHigh db:0 Channel0
+sgt powerHigh powerHigh 0.25
+add sp sp 1
+peek deviceName
+#Reset when hit 0
+beqz deviceName reset
+
+checkCentrifuge:
+sbn CENTRIFUGE deviceName On powerHigh
+lbn reagents CENTRIFUGE deviceName Reagents Minimum
+lbn door CENTRIFUGE deviceName Open Minimum
+s db Setting reagents
+bgtz door closeCentrifuge
+bge reagents FULL purgeCentrifuge
+j start
+
+purgeCentrifuge:
+sbn CENTRIFUGE deviceName Open 1
+j start
+
+closeCentrifuge:
+bnez reagents start
+sbn CENTRIFUGE deviceName Open 0
+j start
