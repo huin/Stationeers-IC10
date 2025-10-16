@@ -1,0 +1,61 @@
+# For use with charge-broadcast.ic10.
+# Displays power reserve percentage.
+define PFSmallLED -815193061
+define NHSmallLED HASH("LED Power")
+define PFKlaxon -828056979
+define NHKlaxon HASH("Status Warning")
+define PFLightWide 555215790
+define PFLightLong 797794350
+define PFLightAngl 1847265835
+define PFLightWall -1860064656
+define PFLightRond 1514476632
+define NHFullLight HASH("Full Light")
+define NHEmergencyLight HASH("Emergency Light")
+define cyclePeriod 30
+define lowThreshold 0.20
+alias cycle r12
+alias chargeCritical r13
+alias prevChargeCritical r14
+alias chargeRatio r15
+
+move prevChargeCritical -1
+start:
+yield
+l chargeRatio db:0 Channel0
+s db Setting cycle
+slt chargeCritical chargeRatio lowThreshold
+select r0 chargeCritical Color.Red Color.Green
+sbn PFSmallLED NHSmallLED Color r0
+sbn PFSmallLED NHSmallLED Mode 1
+sbn PFSmallLED NHSmallLED Setting chargeRatio
+
+bneal prevChargeCritical chargeCritical updateAllLights
+move prevChargeCritical chargeCritical
+
+add cycle cycle 1
+mod cycle cycle cyclePeriod
+bgt cycle 1 start
+beqz chargeCritical start
+sbn PFKlaxon NHKlaxon Volume 100
+sbn PFKlaxon NHKlaxon Mode 23
+sbn PFKlaxon NHKlaxon On cycle
+j start
+
+updateAllLights:
+push ra
+move r0 chargeCritical
+move r1 NHEmergencyLight
+jal setLightClass
+xor r0 chargeCritical 1
+move r1 NHFullLight
+jal setLightClass
+pop ra
+j ra
+
+setLightClass:  # r0=On, r1=NH
+sbn PFLightWide r1 On r0
+sbn PFLightLong r1 On r0
+sbn PFLightAngl r1 On r0
+sbn PFLightWall r1 On r0
+sbn PFLightRond r1 On r0
+j ra
