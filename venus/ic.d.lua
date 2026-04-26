@@ -100,12 +100,16 @@ LogicSlotType = {}
 ---   batch_write_slot_name: (fun(hash: number, nameHash: number, slot: number, slotType: LogicSlotType, value: number, net?: number)),
 ---   enums: {
 ---     LogicType: { -- incomplete
+---       Mode: LogicType,
 ---       On: LogicType,
 ---       Pressure: LogicType,
+---       PressureInput: LogicType,
 ---       PressureOutput: LogicType,
 ---       PressureOutput2: LogicType,
 ---       RatioWater: LogicType,
+---       Setting: LogicType,
 ---       Temperature: LogicType,
+---       TemperatureOutput: LogicType,
 ---     },
 ---     LogicBatchMethod: { -- incomplete
 ---       Average: LogicBatchMethod,
