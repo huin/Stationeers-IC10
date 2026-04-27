@@ -1,0 +1,83 @@
+define PFVolumePump -321403609
+define PFGasCapsuleSmall -1385712131
+define PFGasCapsuleMedium -1093860567
+define PFPressureFedGasEngine -624011170
+define NHVolatilesPump HASH("VP Volatiles")
+define NHOxygenPump HASH("VP Oxygen")
+define NHVolatilesPressurized HASH("Volatiles Pressurized")
+define NHOxygenPressurized HASH("Oxygen Pressurized")
+define NHVolatilesReservoir HASH("Volatiles Reservoir")
+define NHOxygenReservoir HASH("Oxygen Reservoir")
+define gasConstant 8.3144626 # (R - ideal gas constant / 1000 for kPa)
+define pressurizedVolume 250 # Litres
+alias gr0 r0 # general purpose register
+alias gr1 r1 # general purpose register
+alias pressurizedMoles r3 # moles
+alias pressurizedTemperature r4 # Kelvin
+alias reservoirPressure r5 # kPa
+alias reservoirTemperature r6 # Kelvin
+alias pressurizedVolPressure r7 # kPa
+alias pressurizedOxyPressure r8 # kPa
+alias enginePassedMoles r9 # moles
+alias pressureSum r10 # kPa
+alias targetVolPressure r11 # kPa
+alias targetOxyPressure r12 # kPa
+loop:
+lbn pressurizedVolPressure PFGasCapsuleSmall NHVolatilesPressurized Pressure Maximum
+lbn pressurizedOxyPressure PFGasCapsuleSmall NHOxygenPressurized Pressure Maximum
+add pressureSum pressurizedVolPressure pressurizedOxyPressure
+yield
+lb enginePassedMoles PFPressureFedGasEngine PassedMoles Sum
+# ----- Maintain volatiles pressure.
+lbn pressurizedMoles PFGasCapsuleSmall NHVolatilesPressurized TotalMoles Maximum
+lbn pressurizedTemperature PFGasCapsuleSmall NHVolatilesPressurized Temperature Maximum
+lbn reservoirPressure PFGasCapsuleMedium NHVolatilesReservoir Pressure Maximum
+lbn reservoirTemperature PFGasCapsuleMedium NHVolatilesReservoir Temperature Maximum
+# How many moles do we need in pressurized?
+mul gr1 pressurizedTemperature gasConstant # gr1 = T * R
+mul gr0 targetVolPressure pressurizedVolume # gr0 = P * V
+div gr0 gr0 gr1 # n = P * V / (T * R)
+s db Setting gr0
+sub gr0 gr0 pressurizedMoles # target - current = to add
+# Add more moles assuming that the engine will consume the same rate.
+beqz pressureSum skipEngineVol # Skip if unpressurized (avoid NaN).
+div gr1 pressurizedVolPressure pressureSum
+mul gr1 gr1 enginePassedMoles # gr1 = moles used by engine last tick
+add gr0 gr0 gr1 # gr0 = total to add
+skipEngineVol:
+# How many litres to reach that many moles in one tick? V = n * R * T / P
+mul gr0 gr0 gasConstant
+mul gr0 gr0 reservoirTemperature
+div gr0 gr0 reservoirPressure # gr0 = litres/tick
+min gr0 gr0 10
+max gr0 gr0 0
+sbn PFVolumePump NHVolatilesPump Setting gr0
+sgt gr0 gr0 0.5 # Shut down volume pump if <= 0.5 litres to pump
+sbn PFVolumePump NHVolatilesPump On gr0
+# ----- Maintain oxygen pressure.
+lbn pressurizedMoles PFGasCapsuleSmall NHOxygenPressurized TotalMoles Maximum
+lbn pressurizedTemperature PFGasCapsuleSmall NHVolatilesPressurized Temperature Maximum
+lbn reservoirPressure PFGasCapsuleMedium NHOxygenReservoir Pressure Maximum
+lbn reservoirTemperature PFGasCapsuleMedium NHOxygenReservoir Temperature Maximum
+# How many moles do we need in pressurized?
+# n = P * V / (T * R)
+mul gr1 pressurizedTemperature gasConstant # gr1 = T * R
+mul gr0 targetOxyPressure pressurizedVolume # gr0 = P * V
+div gr0 gr0 gr1 # n = P * V / (T * R)
+sub gr0 gr0 pressurizedMoles # target - current = to add
+# Add more moles assuming that the engine will consume the same rate.
+beqz pressureSum skipEngineOxy # Skip if unpressurized (avoid NaN).
+div gr1 pressurizedOxyPressure pressureSum
+mul gr1 gr1 enginePassedMoles # gr1 = moles used by engine last tick
+add gr0 gr0 gr1 # gr0 = total to add
+skipEngineOxy:
+# How many litres to reach that many moles in one tick? V = n * R * T / P
+mul gr0 gr0 gasConstant
+mul gr0 gr0 reservoirTemperature
+div gr0 gr0 reservoirPressure # gr0 = litres/tick
+min gr0 gr0 10
+max gr0 gr0 0
+sbn PFVolumePump NHOxygenPump Setting gr0
+sgt gr0 gr0 0.5 # Shut down volume pump if <= 0.5 litres to pump
+sbn PFVolumePump NHOxygenPump On gr0
+j loop
