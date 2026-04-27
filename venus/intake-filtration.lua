@@ -5,36 +5,7 @@
 local LT = ic.enums.LogicType
 local LBM = ic.enums.LogicBatchMethod
 
---- @class PrefabNamed
---- @field ph number
---- @field nh number
-local PrefabNamed = {}
---- @param o? table
---- @return PrefabNamed
-function PrefabNamed:new(o)
-	o = o or {}
-	setmetatable(o, self)
-	self.__index = self
-	return o
-end
---- @param logicType LogicType
---- @param method LogicBatchMethod
---- @return number?
-function PrefabNamed:read_batch(logicType, method)
-	return ic.batch_read_name(self.ph, self.nh, logicType, method)
-end
---- @param slot number
---- @param slotType LogicSlotType
---- @param method LogicBatchMethod
---- @return number?
-function PrefabNamed:read_batch_slot(slot, slotType, method)
-	return ic.batch_read_slot_name(self.ph, self.nh, slot, slotType, method)
-end
---- @param logicType LogicType
---- @param value number
-function PrefabNamed:write_batch(logicType, value)
-	ic.batch_write_name(self.ph, self.nh, logicType, value)
-end
+-- include:PrefabNamed.lua
 
 local PH_ACTIVE_VENT = -842048328
 local PH_AIRCON = -2087593337
@@ -90,7 +61,7 @@ function configuration()
 		vol_pump = PrefabNamed:new({ ph = PH_VOLPUMP, nh = hash("N2 Volume Pump") }),
 		cold_pa = PrefabNamed:new({ ph = PH_FILTRATION, nh = hash("Cold N2 Pipe Analyzer") }),
 		target_cooling_pressure_kpa = 1000,
-		target_cold_pressure_kpa = 5000,
+		target_cold_pressure_kpa = 1000,
 		current_state = pl_state_wait,
 	}
 	CO2_PIPELINE = {
@@ -109,15 +80,13 @@ function tick(dt)
 	COOLER:write_batch(LT.On, 1)
 
 	local want_global = { cooling_active = false, intake_on = false }
-	print("N2")
 	run_pipeline(N2_PIPELINE, want_global)
-	print("CO2")
 	run_pipeline(CO2_PIPELINE, want_global)
 	INTAKE:write_batch(LT.On, want_global.intake_on)
 	-- Use Mode for aircon, so that it can house the chip (powering itself off
 	-- would be a bad idea).
 	COOLER:write_batch(LT.Mode, want_global.cooling_active)
-	COOLER:write_batch(LT.Temperature, TARGET_TEMPERATURE_K)
+	COOLER:write_batch(LT.Setting, TARGET_TEMPERATURE_K)
 end
 
 --- @param pl Pipeline
@@ -128,7 +97,6 @@ function run_pipeline(pl, want_global)
 	local want_pl = { filter_on = 0, volpump_on = 0 }
 	-- TODO: Check filtration filters.
 	-- TODO: Consider loading only during cooler weather.
-	print(pl.current_state)
 	pl.current_state = pl.current_state(pl, want_global, want_pl)
 	pl.filter:write_batch(LT.On, want_pl.filter_on)
 	pl.vol_pump:write_batch(LT.On, want_pl.volpump_on)
@@ -140,7 +108,6 @@ end
 --- @param want_pl WantPipeline
 --- @return PipelineState
 function pl_state_load(pl, want_global, want_pl)
-	print("pl_state_load")
 	local out_pressure = pl.filter:read_batch(LT.PressureOutput, LBM.Maximum)
 	if out_pressure >= pl.target_cooling_pressure_kpa then
 		return pl_state_cooling(pl, want_global, want_pl)
@@ -157,7 +124,6 @@ end
 --- @param want_pl WantPipeline
 --- @return PipelineState
 function pl_state_cooling(pl, want_global, want_pl)
-	print("pl_state_cooling")
 	local cooling_temperature_k = pl.filter:read_batch(LT.TemperatureOutput, LBM.Average)
 	local temperature_diff_k = math.abs(cooling_temperature_k - TARGET_TEMPERATURE_K)
 	if temperature_diff_k <= TARGET_TEMPERATURE_TOLERANCE_K then
@@ -174,7 +140,6 @@ end
 --- @param want_pl WantPipeline
 --- @return PipelineState
 function pl_state_moving(pl, want_global, want_pl)
-	print("pl_state_moving")
 	local cold_tank_kpa = pl.cold_pa:read_batch(LT.Pressure, LBM.Maximum)
 	if cold_tank_kpa >= pl.target_cold_pressure_kpa then
 		return pl_state_wait(pl, want_global, want_pl)
@@ -189,12 +154,11 @@ end
 --- @param want_pl WantPipeline
 --- @return PipelineState
 function pl_state_wait(pl, want_global, want_pl)
-	print("pl_state_wait")
 	local cold_tank_kpa = pl.cold_pa:read_batch(LT.Pressure, LBM.Maximum)
-	if cold_tank_kpa < pl.target_cold_pressure_kpa then
+	local cooling_tank_kpa = pl.filter:read_batch(LT.TemperatureOutput, LBM.Maximum)
+	if cold_tank_kpa < pl.target_cold_pressure_kpa or cooling_tank_kpa < pl.target_cooling_pressure_kpa then
 		return pl_state_load(pl, want_global, want_pl)
 	end
-	-- TODO: Consider loading the cooling tank if its pressure is low.
 	want_pl.filter_on = 0
 	want_pl.volpump_on = 0
 	return pl_state_wait
