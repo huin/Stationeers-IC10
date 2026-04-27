@@ -1,0 +1,39 @@
+-- local SRF_MAIN = "main"
+-- local LABEL_STYLE = { font_size = 20, color = "#888888" }
+
+-- local ui = ss.ui.surface(SRF_MAIN)
+-- ss.ui.activate(SRF_MAIN)
+-- local SIZE = ui:size()
+-- local W, H = SIZE.w, SIZE.h
+-- print(W)
+-- print(H)
+
+-- ui:clear()
+-- local MAIN = ui:layout({
+-- 	layout = "flex",
+-- 	rect = { unit = "px", x = 0, y = 0, w = W, h = H },
+-- 	direction = "column",
+-- 	gap = 1,
+-- 	children = {
+-- 		-- Title bar.
+-- 		{ id = "title", type = "label", props = { text = "Fermentation" }, style = LABEL_STYLE },
+-- 		{ id = "sep", type = "divider", rect = { h = 2 } },
+-- 		{
+-- 			layout = "flex",
+-- 			direction = "row",
+-- 			rect = { h = 64 },
+-- 			children = {
+-- 				{ id = "ferm_out_label", type = "label", props = { text = "Fermenter" }, style = LABEL_STYLE },
+-- 				{
+-- 					id = "ferm_out_gauge",
+-- 					type = "gauge",
+-- 					rect = { w = 64, h = 64 },
+-- 					props = { text = "Fermenter" },
+-- 				},
+-- 			},
+-- 		},
+-- 		{ id = "placeholder", type = "panel", flex = 1 },
+-- 	},
+-- })
+--
+-- ui:commit()
