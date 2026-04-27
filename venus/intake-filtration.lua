@@ -42,26 +42,26 @@ local PH_FILTRATION = -348054045
 local PH_VOLPUMP = -321403609
 local PH_PIPEANA = 435685051
 
---- @class WantGlobal
---- @field intake_on number
---- @field cooling_active number
-WantGlobal = {}
+--- @alias WantGlobal {
+---   intake_on: number,
+---   cooling_active: number,
+--- }
 
---- @class WantPipeline
---- @field filter_on number
---- @field volpump_on number
-WantPipeline = {}
+--- @alias WantPipeline {
+---   filter_on: number,
+---   volpump_on: number,
+--- }
 
---- @alias PipelineState function(pl: Pipeline, want_global: WantGlobal, want_pl: WantPipeline): PipelineState
+--- @alias PipelineState fun(pl: Pipeline, want_global: WantGlobal, want_pl: WantPipeline): PipelineState
 
---- @class Pipeline
---- @field filter PrefabNamed
---- @field vol_pump PrefabNamed
---- @field cold_pa PrefabNamed
---- @field target_cooling_pressure_kpa number
---- @field target_cold_pressure_kpa number
---- @field current_state PipelineState
-Pipeline = {}
+--- @alias Pipeline {
+---   filter: PrefabNamed,
+---   vol_pump: PrefabNamed,
+---   cold_pa: PrefabNamed,
+---   target_cooling_pressure_kpa: number,
+---   target_cold_pressure_kpa: number,
+---   current_state: PipelineState,
+--- }
 
 --- @type number
 local TARGET_TEMPERATURE_K
@@ -82,10 +82,9 @@ function configuration()
 	TARGET_TEMPERATURE_K = util.temp(25, "C", "K")
 	TARGET_TEMPERATURE_TOLERANCE_K = 3.0
 
-	INTAKE = PrefabNamed:new({ ph = PH_ACTIVE_VENT, nh = hash("AV Atmosphere Intake") }) -- TODO check name
+	INTAKE = PrefabNamed:new({ ph = PH_ACTIVE_VENT, nh = hash("AV Atmosphere Intake") })
 	COOLER = PrefabNamed:new({ ph = PH_AIRCON, nh = hash("Cooling Tanks Air Conditioner") })
 
-	--- @type Pipeline
 	N2_PIPELINE = {
 		filter = PrefabNamed:new({ ph = PH_FILTRATION, nh = hash("N2 Filtration") }),
 		vol_pump = PrefabNamed:new({ ph = PH_VOLPUMP, nh = hash("N2 Volume Pump") }),
@@ -94,7 +93,6 @@ function configuration()
 		target_cold_pressure_kpa = 5000,
 		current_state = pl_state_wait,
 	}
-	--- @type Pipeline
 	CO2_PIPELINE = {
 		filter = PrefabNamed:new({ ph = PH_FILTRATION, nh = hash("CO2 Filtration") }),
 		vol_pump = PrefabNamed:new({ ph = PH_VOLPUMP, nh = hash("CO2 Volume Pump") }),
