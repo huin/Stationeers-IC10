@@ -96,7 +96,9 @@ class Compiler:
         parent_files: set[Path],
     ) -> Iterator[str]:
         if file_path in parent_files:
-            raise click.ClickException(f"Recusive include found to {file_path}")
+            raise click.ClickException(
+                f"Recusive include found to {file_path}"
+            )
 
         with file_path.open("r") as in_file:
             for line in in_file:
@@ -122,7 +124,9 @@ class Compiler:
         parent_files: set[Path],
     ) -> Iterator[str]:
         if not file_path.is_absolute():
-            for dir in itertools.chain([parent_file.parent], self._include_dirs):
+            for dir in itertools.chain(
+                [parent_file.parent], self._include_dirs
+            ):
                 candidate_path = dir / file_path
                 if candidate_path.exists():
                     file_path = candidate_path
