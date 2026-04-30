@@ -12,3 +12,6 @@ devenv.local.yaml
 # Python
 *.pyc
 __pycache__
+
+# Temporary/experimental stuff
+scratch
