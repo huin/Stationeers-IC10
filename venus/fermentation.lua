@@ -6,7 +6,7 @@ local PH_FERMENTER = 1103525139
 local PH_EVAPORATOR = -1429782576
 local PH_CONDENSOR = 1420719315
 local PH_FILTRATION = -348054045
-local PH_HEATER = -419758574
+local PH_AIRCON = -2087593337
 
 local NH_DEV = hash("Fermentation")
 
@@ -23,7 +23,7 @@ local FERMENTER = PrefabNamed:new({ ph = PH_FERMENTER, nh = NH_DEV })
 local EVAPORATOR = PrefabNamed:new({ ph = PH_EVAPORATOR, nh = NH_DEV })
 local FILTRATION = PrefabNamed:new({ ph = PH_FILTRATION, nh = NH_DEV })
 local CONDENSOR = PrefabNamed:new({ ph = PH_CONDENSOR, nh = NH_DEV })
-local HEATER = PrefabNamed:new({ ph = PH_HEATER, nh = NH_DEV })
+local AIRCON = PrefabNamed:new({ ph = PH_AIRCON, nh = NH_DEV })
 
 --- @param dt number
 --- @diagnostic disable-next-line:unused-local
@@ -61,7 +61,8 @@ function tick(dt)
 		)
 	)
 
-	HEATER:write_batch(LT.On, bool_to_num(EVAPORATOR:read_batch(LT.Temperature, LBM.Average) < TARGET_TEMPERATURE_K))
+	AIRCON:write_batch(LT.Setting, TARGET_TEMPERATURE_K)
+	AIRCON:write_batch(LT.On, 1)
 end
 
 --- @param n number?
