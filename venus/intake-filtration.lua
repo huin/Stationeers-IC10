@@ -7,7 +7,7 @@ local LBM = ic.enums.LogicBatchMethod
 
 -- include:PrefabNamed.lua
 
-local PH_ACTIVE_VENT = -842048328
+local PH_ACTIVE_VENT = -1129453144
 local PH_AIRCON = -2087593337
 local PH_FILTRATION = -348054045
 local PH_VOLPUMP = -321403609
@@ -23,8 +23,6 @@ local PH_GAS_SENSOR = -1252983604
 ---   volpump_on: number,
 --- }
 
---- @alias PipelineState fun(pl: Pipeline, want_global: WantGlobal, want_pl: WantPipeline): PipelineState
-
 --- @alias Pipeline {
 ---   name: string,
 ---   filter: PrefabNamed,
@@ -32,7 +30,6 @@ local PH_GAS_SENSOR = -1252983604
 ---   cold_pa: PrefabNamed,
 ---   target_cooling_pressure_kpa: number,
 ---   target_cold_pressure_kpa: number,
----   current_state: PipelineState,
 --- }
 
 --- @type number
@@ -55,7 +52,10 @@ local COOLER
 local MIN_TANK_PRESSURE = 100
 --- Maximum pressure to fill a tank to.
 --- @type number
-local MAX_TANK_PRESSURE = 49000
+local MAX_TANK_PRESSURE = 46000
+--- Maximum pressure to fill a cooling tank to.
+--- @type number
+local MAX_COOLING_PRESSURE = 5000
 
 --- @type [Pipeline]
 local PIPELINES
@@ -63,7 +63,7 @@ local PIPELINES
 function configuration()
 	TARGET_TEMPERATURE_K = util.temp(25, "C", "K")
 	TARGET_TEMPERATURE_TOLERANCE_K = 4.0
-	INTAKE_BELOW_TEMPERATURE_K = util.temp(380, "C", "K")
+	INTAKE_BELOW_TEMPERATURE_K = util.temp(400, "C", "K")
 
 	ATMOSPHERE_GS = PrefabNamed:new({ ph = PH_GAS_SENSOR, nh = hash("Atmospheric Gas Sensor") })
 	INTAKE = PrefabNamed:new({ ph = PH_ACTIVE_VENT, nh = hash("AV Atmosphere Intake") })
@@ -77,7 +77,6 @@ function configuration()
 			cold_pa = PrefabNamed:new({ ph = PH_PIPEANA, nh = hash("Cold N2 Pipe Analyzer") }),
 			target_cooling_pressure_kpa = 1000,
 			target_cold_pressure_kpa = 1000,
-			current_state = pl_state_wait,
 		},
 		{
 			name = "CO2",
@@ -86,13 +85,9 @@ function configuration()
 			cold_pa = PrefabNamed:new({ ph = PH_PIPEANA, nh = hash("Cold CO2 Pipe Analyzer") }),
 			target_cooling_pressure_kpa = 1000,
 			target_cold_pressure_kpa = 5000,
-			current_state = pl_state_wait,
 		},
 	}
 end
-
---- @type table<PipelineState, string>
-local state_names
 
 --- @param dt number
 --- @diagnostic disable-next-line:unused-local
@@ -100,6 +95,7 @@ function tick(dt)
 	-- COOLER is assumed to be housing this Lua chip.
 	COOLER:write_batch(LT.On, 1)
 
+	can_fill_atmospheric_tank()
 	if is_atmospheric_temperature_good() and can_fill_atmospheric_tank() then
 		INTAKE:write_batch(LT.Mode, 1) -- Intake mode.
 		INTAKE:write_batch(LT.PressureInternal, MAX_TANK_PRESSURE)
@@ -126,87 +122,27 @@ function run_pipeline(pl, want_global)
 	--- @type WantPipeline
 	local want_pl = { filter_on = 0, volpump_on = 0 }
 	-- TODO: Check filtration filters.
-	local original_state = pl.current_state
-	pl.current_state = pl.current_state(pl, want_global, want_pl)
-	if original_state ~= pl.current_state then
-		print(string.format("%s %s -> %s", pl.name, state_names[original_state], state_names[pl.current_state]))
-	else
-		print(string.format("%s %s", pl.name, state_names[original_state]))
+
+	local cooling_pressure = pl.filter:read_batch(LT.PressureOutput, LBM.Maximum)
+	local cold_pressure = pl.cold_pa:read_batch(LT.Pressure, LBM.Maximum)
+	local filtration_input_pressure = pl.filter:read_batch(LT.PressureInput, LBM.Maximum)
+	local cooling_temperature_is_good = is_cooling_temperature_good(pl)
+
+	if cooling_temperature_is_good and cooling_pressure > MIN_TANK_PRESSURE and cold_pressure < MAX_TANK_PRESSURE then
+		want_pl.volpump_on = 1
+	elseif filtration_input_pressure > MIN_TANK_PRESSURE and cooling_pressure <= MAX_COOLING_PRESSURE then
+		want_pl.filter_on = 1
 	end
+
+	if not cooling_temperature_is_good then
+		want_global.cooling_active = 1
+	end
+
 	pl.filter:write_batch(LT.On, want_pl.filter_on)
 	pl.vol_pump:write_batch(LT.On, want_pl.volpump_on)
 	if want_pl.volpump_on then
 		pl.vol_pump:write_batch(LT.Setting, 10)
 	end
-end
-
---- Idle state, waiting to dispatch to a useful operation.
---- @param pl Pipeline
---- @param want_global WantGlobal
---- @param want_pl WantPipeline
---- @return PipelineState
-function pl_state_wait(pl, want_global, want_pl)
-	if is_cooling_tank_below_pressure(pl) then
-		if not is_filtration_input_below_pressure(pl) then
-			return pl_state_load(pl, want_global, want_pl)
-		end
-		return pl_state_wait
-	end
-
-	if not is_cooling_temperature_good(pl) then
-		return pl_state_cooling(pl, want_global, want_pl)
-	end
-
-	if is_cold_tank_below_pressure(pl) then
-		return pl_state_moving(pl, want_global, want_pl)
-	end
-
-	return pl_state_wait
-end
-
---- Load atmospheric gas into the cooling tanks.
---- @param pl Pipeline
---- @param want_global WantGlobal
---- @param want_pl WantPipeline
---- @return PipelineState
-function pl_state_load(pl, want_global, want_pl)
-	if not is_cooling_tank_below_pressure(pl) then
-		return pl_state_cooling(pl, want_global, want_pl)
-	end
-	if is_filtration_input_below_pressure(pl) then
-		return pl_state_wait(pl, want_global, want_pl)
-	end
-	want_pl.filter_on = 1
-	want_global.cooling_active = 1
-	return pl_state_load
-end
-
---- @param pl Pipeline
---- @param want_global WantGlobal
---- @param want_pl WantPipeline
---- @return PipelineState
-function pl_state_cooling(pl, want_global, want_pl)
-	if is_cooling_temperature_good(pl) then
-		return pl_state_moving(pl, want_global, want_pl)
-	end
-	want_global.cooling_active = 1
-	return pl_state_cooling
-end
-
---- @param pl Pipeline
---- @param want_global WantGlobal
---- @param want_pl WantPipeline
---- @return PipelineState
-function pl_state_moving(pl, want_global, want_pl)
-	if
-		not is_cooling_temperature_good(pl)
-		or not is_cold_tank_below_pressure(pl)
-		or is_cooling_tank_below_pressure(pl)
-	then
-		return pl_state_wait(pl, want_global, want_pl)
-	end
-	want_pl.volpump_on = 1
-	return pl_state_moving
 end
 
 --- @param pl Pipeline
@@ -215,24 +151,6 @@ function is_cooling_temperature_good(pl)
 	local cooling_temperature_k = pl.filter:read_batch(LT.TemperatureOutput, LBM.Average)
 	local temperature_diff_k = math.abs(cooling_temperature_k - TARGET_TEMPERATURE_K)
 	return temperature_diff_k <= TARGET_TEMPERATURE_TOLERANCE_K
-end
-
---- @param pl Pipeline
---- @return boolean
-function is_cold_tank_below_pressure(pl)
-	return pl.cold_pa:read_batch(LT.Pressure, LBM.Maximum) < pl.target_cold_pressure_kpa
-end
-
---- @param pl Pipeline
---- @return boolean
-function is_cooling_tank_below_pressure(pl)
-	return pl.filter:read_batch(LT.PressureOutput, LBM.Maximum) < MIN_TANK_PRESSURE
-end
-
---- @param pl Pipeline
---- @return boolean
-function is_filtration_input_below_pressure(pl)
-	return pl.filter:read_batch(LT.PressureInput, LBM.Maximum) < MIN_TANK_PRESSURE
 end
 
 --- @return boolean
@@ -244,12 +162,5 @@ end
 function is_atmospheric_temperature_good()
 	return ATMOSPHERE_GS:read_batch(LT.Temperature, LBM.Average) < INTAKE_BELOW_TEMPERATURE_K
 end
-
-state_names = {
-	[pl_state_wait] = "wait",
-	[pl_state_load] = "load",
-	[pl_state_cooling] = "cooling",
-	[pl_state_moving] = "moving",
-}
 
 configuration()
