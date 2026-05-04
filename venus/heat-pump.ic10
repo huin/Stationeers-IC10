@@ -1,0 +1,32 @@
+define PHGS -1252983604
+define PHPA 435685051
+define PHDV -1280984102
+define PH_CONDEN 1420719315
+define PH_EVAPOR -1429782576
+define NHAtmosGS HASH("Atmospheric Gas Sensor")
+define NHHeatPA HASH("Heat Pump CC Pipe Analyzer")
+define NHRadiaDV HASH("Radiators Digital Valve")
+define NHHeatPump HASH("Heat Pump")
+define EVAP_TARGET_TEMP 298.15  # 25C
+define EVAP_LOW_TEMP_PRESSURE 1200 # kPa
+alias AtmosTemp r0
+alias HeatTemp r1
+alias ValveSet r2
+alias EvapTemp r3
+alias EvapSet r4
+loop:
+# Manage external atmospheric tank temperature.
+# Uses storm cooling.
+lbn AtmosTemp PHGS NHAtmosGS Temperature Average
+lbn HeatTemp PHPA NHHeatPA Temperature Average
+slt ValveSet AtmosTemp HeatTemp
+sbn PHDV NHRadiaDV On ValveSet
+# Lower target pressure while the evaporator is hot.
+# We don't want it to be low if temperature is low,
+# otherwise we can potentially freeze the coolant.
+lbn EvapTemp PH_EVAPOR NHHeatPump Temperature Minimum
+slt EvapSet EvapTemp EVAP_TARGET_TEMP
+mul EvapSet EvapSet EVAP_LOW_TEMP_PRESSURE
+sbn PH_EVAPOR NHHeatPump Setting EvapSet
+yield
+j loop
