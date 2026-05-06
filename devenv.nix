@@ -2,7 +2,7 @@
 
 {
   # https://devenv.sh/basics/
-  env.LUA_INCLUDE = "./lualib";
+  env.LUA_INCLUDE = lib.strings.join ":" ["./lualib"];
 
   # https://devenv.sh/packages/
   packages = [ pkgs.git ];
