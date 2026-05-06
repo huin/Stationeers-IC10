@@ -10,6 +10,15 @@ function PrefabNamed:new(o)
 	self.__index = self
 	return o
 end
+--- @param ph number
+--- @param name string
+--- @return PrefabNamed
+function PrefabNamed:create(ph, name)
+	return PrefabNamed:new({
+		ph = ph,
+		nh = hash(name),
+	})
+end
 --- @param logicType LogicType
 --- @param method LogicBatchMethod
 --- @return number?
