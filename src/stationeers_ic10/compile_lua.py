@@ -25,7 +25,8 @@ _INCLUDE_RX = re.compile(r"-- include:(.+)")
 @click.option(
     "-I",
     "--include-dir",
-    type=Path,
+    envvar=["LUA_INCLUDE"],
+    type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     multiple=True,
 )
 @click.argument(

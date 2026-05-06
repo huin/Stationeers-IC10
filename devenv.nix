@@ -2,7 +2,7 @@
 
 {
   # https://devenv.sh/basics/
-  env.GREET = "devenv";
+  env.LUA_INCLUDE = "./lualib";
 
   # https://devenv.sh/packages/
   packages = [ pkgs.git ];
