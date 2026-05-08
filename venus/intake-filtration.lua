@@ -65,24 +65,24 @@ function configuration()
 	TARGET_TEMPERATURE_TOLERANCE_K = 4.0
 	INTAKE_BELOW_TEMPERATURE_K = util.temp(400, "C", "K")
 
-	ATMOSPHERE_GS = PrefabNamed:new({ ph = PH_GAS_SENSOR, nh = hash("Atmospheric Gas Sensor") })
-	INTAKE = PrefabNamed:new({ ph = PH_ACTIVE_VENT, nh = hash("AV Atmosphere Intake") })
-	COOLER = PrefabNamed:new({ ph = PH_AIRCON, nh = hash("Cooling Tanks Air Conditioner") })
+	ATMOSPHERE_GS = PrefabNamed:create(PH_GAS_SENSOR, "Atmospheric Gas Sensor")
+	INTAKE = PrefabNamed:create(PH_ACTIVE_VENT, "AV Atmosphere Intake")
+	COOLER = PrefabNamed:create(PH_AIRCON, "Cooling Tanks Air Conditioner")
 
 	PIPELINES = {
 		{
 			name = "N2",
-			filter = PrefabNamed:new({ ph = PH_FILTRATION, nh = hash("N2 Filtration") }),
-			vol_pump = PrefabNamed:new({ ph = PH_VOLPUMP, nh = hash("N2 Volume Pump") }),
-			cold_pa = PrefabNamed:new({ ph = PH_PIPEANA, nh = hash("Cold N2 Pipe Analyzer") }),
+			filter = PrefabNamed:create(PH_FILTRATION, "N2 Filtration"),
+			vol_pump = PrefabNamed:create(PH_VOLPUMP, "N2 Volume Pump"),
+			cold_pa = PrefabNamed:create(PH_PIPEANA, "Cold N2 Pipe Analyzer"),
 			target_cooling_pressure_kpa = 1000,
 			target_cold_pressure_kpa = 1000,
 		},
 		{
 			name = "CO2",
-			filter = PrefabNamed:new({ ph = PH_FILTRATION, nh = hash("CO2 Filtration") }),
-			vol_pump = PrefabNamed:new({ ph = PH_VOLPUMP, nh = hash("CO2 Volume Pump") }),
-			cold_pa = PrefabNamed:new({ ph = PH_PIPEANA, nh = hash("Cold CO2 Pipe Analyzer") }),
+			filter = PrefabNamed:create(PH_FILTRATION, "CO2 Filtration"),
+			vol_pump = PrefabNamed:create(PH_VOLPUMP, "CO2 Volume Pump"),
+			cold_pa = PrefabNamed:create(PH_PIPEANA, "Cold CO2 Pipe Analyzer"),
 			target_cooling_pressure_kpa = 1000,
 			target_cold_pressure_kpa = 5000,
 		},

@@ -8,7 +8,7 @@ local PH_CONDENSOR = 1420719315
 local PH_FILTRATION = -348054045
 local PH_AIRCON = -2087593337
 
-local NH_DEV = hash("Fermentation")
+local NAME_DEV = "Fermentation"
 
 -- Max gas pressure limited to portable tank.
 local MAX_GAS_PRESSURE = 15000
@@ -19,11 +19,11 @@ local TARGET_TEMPERATURE_K = util.temp(25, "C", "K")
 
 -- include:PrefabNamed.lua
 
-local FERMENTER = PrefabNamed:new({ ph = PH_FERMENTER, nh = NH_DEV })
-local EVAPORATOR = PrefabNamed:new({ ph = PH_EVAPORATOR, nh = NH_DEV })
-local FILTRATION = PrefabNamed:new({ ph = PH_FILTRATION, nh = NH_DEV })
-local CONDENSOR = PrefabNamed:new({ ph = PH_CONDENSOR, nh = NH_DEV })
-local AIRCON = PrefabNamed:new({ ph = PH_AIRCON, nh = NH_DEV })
+local FERMENTER = PrefabNamed:create(PH_FERMENTER, NAME_DEV)
+local EVAPORATOR = PrefabNamed:create(PH_EVAPORATOR, NAME_DEV)
+local FILTRATION = PrefabNamed:create(PH_FILTRATION, NAME_DEV)
+local CONDENSOR = PrefabNamed:create(PH_CONDENSOR, NAME_DEV)
+local AIRCON = PrefabNamed:create(PH_AIRCON, NAME_DEV)
 
 --- @param dt number
 --- @diagnostic disable-next-line:unused-local

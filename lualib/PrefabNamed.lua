@@ -1,23 +1,18 @@
 --- @class PrefabNamed
---- @field ph number
---- @field nh number
+--- @field ph PrefabHash
+--- @field nh NameHash
 PrefabNamed = {}
---- @param o? table
---- @return PrefabNamed
-function PrefabNamed:new(o)
-	o = o or {}
-	setmetatable(o, self)
-	self.__index = self
-	return o
-end
---- @param ph number
+--- @param ph PrefabHash
 --- @param name string
 --- @return PrefabNamed
 function PrefabNamed:create(ph, name)
-	return PrefabNamed:new({
+	local o = {
 		ph = ph,
 		nh = hash(name),
-	})
+	}
+	setmetatable(o, self)
+	self.__index = self
+	return o
 end
 --- @param logicType LogicType
 --- @param method LogicBatchMethod
@@ -25,7 +20,7 @@ end
 function PrefabNamed:read_batch(logicType, method)
 	return ic.batch_read_name(self.ph, self.nh, logicType, method)
 end
---- @param slot number
+--- @param slot SlotIndex
 --- @param slotType LogicSlotType
 --- @param method LogicBatchMethod
 --- @return number?
