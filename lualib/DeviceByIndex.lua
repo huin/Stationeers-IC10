@@ -22,3 +22,17 @@ end
 function DeviceByIndex:write(logicType, value, net)
 	ic.write(self.dev, logicType, value, net)
 end
+--- Polymorphically implementing PrefabNamed:read_batch.
+--- @param logicType LogicType
+--- @param method LogicBatchMethod
+--- @return number?
+function DeviceByIndex:read_batch(logicType, method)
+	_ = method
+	return ic.read(self.dev, logicType)
+end
+--- Polymorphically implementing PrefabNamed:write_batch.
+--- @param logicType LogicType
+--- @param value number
+function DeviceByIndex:write_batch(logicType, value)
+	ic.write(self.dev, logicType, value)
+end

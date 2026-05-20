@@ -45,3 +45,17 @@ end
 function DeviceByRef:write(logicType, value, net)
 	ic.write_id(self.id, logicType, value, net)
 end
+--- Polymorphically implementing PrefabNamed:read_batch.
+--- @param logicType LogicType
+--- @param method LogicBatchMethod
+--- @return number?
+function DeviceByRef:read_batch(logicType, method)
+	_ = method
+	return ic.read_id(self.id, logicType)
+end
+--- Polymorphically implementing PrefabNamed:write_batch.
+--- @param logicType LogicType
+--- @param value number
+function DeviceByRef:write_batch(logicType, value)
+	ic.write_id(self.id, logicType, value)
+end
