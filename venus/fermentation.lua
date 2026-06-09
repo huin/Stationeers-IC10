@@ -8,10 +8,11 @@ local PH_CONDENSOR = 1420719315
 local PH_FILTRATION = -348054045
 local PH_AIRCON = -2087593337
 
-local NAME_DEV = "Fermentation"
-
 -- Max gas pressure limited to portable tank.
-local MAX_GAS_PRESSURE = 15000
+local MAX_GAS_TANK_PRESSURE = 15000
+-- Limit pressure of gasses in gas pipe to not exceed 1MPa, to avoid too much
+-- liquid condensate.
+local MAX_GAS_PIPE_PRESSURE = 1000
 local MAX_LIQ_PRESSURE = 4500
 
 -- Target temperature for evaporator.
@@ -19,17 +20,17 @@ local TARGET_TEMPERATURE_K = util.temp(25, "C", "K")
 
 -- include:PrefabNamed.lua
 
-local FERMENTER = PrefabNamed:create(PH_FERMENTER, NAME_DEV)
-local EVAPORATOR = PrefabNamed:create(PH_EVAPORATOR, NAME_DEV)
-local FILTRATION = PrefabNamed:create(PH_FILTRATION, NAME_DEV)
-local CONDENSOR = PrefabNamed:create(PH_CONDENSOR, NAME_DEV)
-local AIRCON = PrefabNamed:create(PH_AIRCON, NAME_DEV)
+local FERMENTER = PrefabNamed:create(PH_FERMENTER, "Ferm_Unit")
+local EVAPORATOR = PrefabNamed:create(PH_EVAPORATOR, "Ferm_Evap")
+local FILTRATION = PrefabNamed:create(PH_FILTRATION, "Ferm_Filt")
+local CONDENSOR = PrefabNamed:create(PH_CONDENSOR, "Ferm_Cond")
+local AIRCON = PrefabNamed:create(PH_AIRCON, "Ferm_AC")
 
 --- @param dt number
 --- @diagnostic disable-next-line:unused-local
 function tick(dt)
 	FERMENTER:write_batch(
-		LT.On,
+		LT.Mode,
 		bool_to_num(
 			num_to_bool(FERMENTER:read_batch_slot(0, LST.Occupied, LBM.Maximum))
 				and FERMENTER:read_batch(LT.PressureOutput, LBM.Maximum) < MAX_LIQ_PRESSURE
@@ -40,16 +41,16 @@ function tick(dt)
 		LT.On,
 		bool_to_num(
 			FERMENTER:read_batch(LT.PressureOutput, LBM.Maximum) > 100
-				and EVAPORATOR:read_batch(LT.PressureOutput, LBM.Maximum) < MAX_GAS_PRESSURE
+				and EVAPORATOR:read_batch(LT.PressureOutput, LBM.Maximum) < MAX_GAS_PIPE_PRESSURE
 		)
 	)
 
 	FILTRATION:write_batch(
-		LT.On,
+		LT.Mode,
 		bool_to_num(
 			FILTRATION:read_batch(LT.PressureInput, LBM.Maximum) > 10
-				and FILTRATION:read_batch(LT.PressureOutput, LBM.Maximum) < MAX_GAS_PRESSURE
-				and FILTRATION:read_batch(LT.PressureOutput2, LBM.Maximum) < MAX_GAS_PRESSURE
+				and FILTRATION:read_batch(LT.PressureOutput, LBM.Maximum) < MAX_GAS_PIPE_PRESSURE
+				and FILTRATION:read_batch(LT.PressureOutput2, LBM.Maximum) < MAX_GAS_TANK_PRESSURE
 		)
 	)
 
@@ -62,7 +63,11 @@ function tick(dt)
 	)
 
 	AIRCON:write_batch(LT.Setting, TARGET_TEMPERATURE_K)
+	AIRCON:write_batch(LT.Mode, 1)
+
+	FERMENTER:write_batch(LT.On, 1)
 	AIRCON:write_batch(LT.On, 1)
+	FILTRATION:write_batch(LT.On, 1)
 end
 
 --- @param n number?
