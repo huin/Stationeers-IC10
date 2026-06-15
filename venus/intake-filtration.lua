@@ -28,6 +28,7 @@ local PH_GAS_SENSOR = -1252983604
 ---   filter: PrefabNamed,
 ---   vol_pump: PrefabNamed,
 ---   cold_pa: PrefabNamed,
+---   gas_ratio_lt: LogicType,
 ---   target_cooling_pressure_kpa: number,
 ---   target_cold_pressure_kpa: number,
 --- }
@@ -56,6 +57,8 @@ local MAX_TANK_PRESSURE = 46000
 --- Maximum pressure to fill a cooling tank to.
 --- @type number
 local MAX_COOLING_PRESSURE = 5000
+--- Minmum gas ratio to bother filtering.
+local MIN_FILTRATION_INPUT_RATIO = 0.01
 
 --- @type [Pipeline]
 local PIPELINES
@@ -75,6 +78,7 @@ function configuration()
 			filter = PrefabNamed:create(PH_FILTRATION, "N2 Filtration"),
 			vol_pump = PrefabNamed:create(PH_VOLPUMP, "N2 Volume Pump"),
 			cold_pa = PrefabNamed:create(PH_PIPEANA, "Cold N2 Pipe Analyzer"),
+			gas_ratio_lt = LT.RatioNitrogen,
 			target_cooling_pressure_kpa = 1000,
 			target_cold_pressure_kpa = 1000,
 		},
@@ -83,6 +87,7 @@ function configuration()
 			filter = PrefabNamed:create(PH_FILTRATION, "CO2 Filtration"),
 			vol_pump = PrefabNamed:create(PH_VOLPUMP, "CO2 Volume Pump"),
 			cold_pa = PrefabNamed:create(PH_PIPEANA, "Cold CO2 Pipe Analyzer"),
+			gas_ratio_lt = LT.RatioCarbonDioxide,
 			target_cooling_pressure_kpa = 1000,
 			target_cold_pressure_kpa = 5000,
 		},
@@ -109,6 +114,10 @@ function tick(dt)
 	for _, pl in ipairs(PIPELINES) do
 		run_pipeline(pl, want_global)
 	end
+
+	-- TODO: vent the atmospheric gas if no pipeline wants it. Or if some
+	-- pipelines are unsatisfied and we're looking to refill the tanks.
+
 	-- Use Mode for aircon, so that it can house the chip (powering itself off
 	-- would be a bad idea).
 	COOLER:write_batch(LT.Mode, want_global.cooling_active)
@@ -126,11 +135,16 @@ function run_pipeline(pl, want_global)
 	local cooling_pressure = pl.filter:read_batch(LT.PressureOutput, LBM.Maximum)
 	local cold_pressure = pl.cold_pa:read_batch(LT.Pressure, LBM.Maximum)
 	local filtration_input_pressure = pl.filter:read_batch(LT.PressureInput, LBM.Maximum)
+	local filtration_ratio = pl.filter:read_batch(pl.gas_ratio_lt, LBM.Maximum)
 	local cooling_temperature_is_good = is_cooling_temperature_good(pl)
 
 	if cooling_temperature_is_good and cooling_pressure > MIN_TANK_PRESSURE and cold_pressure < MAX_TANK_PRESSURE then
 		want_pl.volpump_on = 1
-	elseif filtration_input_pressure > MIN_TANK_PRESSURE and cooling_pressure <= MAX_COOLING_PRESSURE then
+	elseif
+		filtration_input_pressure > MIN_TANK_PRESSURE
+		and cooling_pressure <= MAX_COOLING_PRESSURE
+		and filtration_ratio >= MIN_FILTRATION_INPUT_RATIO
+	then
 		want_pl.filter_on = 1
 	end
 
