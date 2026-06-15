@@ -1,14 +1,15 @@
-alias dSensor d0  # required
-# Where sun rises.
-define SunriseBearing 90
-# Sensor 0 azimuth orientation.
-define SensorBearing 0   # degrees
+alias dSensor d0  # Required
+define SunriseBearing 90 # Where sun rises degrees.
+define SensorBearing 180 # Sensor 0 azimuth orientation degrees
 
 define SolarPanelFlat 1968102968
 define SolarPanelAngled -1554349863
 define SolarPanelHeavyFlat 1697196770
 define SolarPanelHeavyAngled 930865127
+define SolarPanel -2045627372
+define SolarPanel5 -295209029
 define SolarPanelDual -539224550
+define SolarPanelDual5 939649277
 define SolarPanelHeavyDual -1545574413
 
 sunDown:
@@ -37,7 +38,7 @@ yield
 j sunUp
 
 align:
-# subroutine. param r0 = azimuth, r1 = elevation
+# param r0 = azimuth, r1 = elevation
 push ra
 push r0
 move r2 HASH("Panel N")
@@ -56,10 +57,16 @@ pop ra
 j ra
 
 alignNamed:
-# subroutine. param r0 = azimuth, r1 = elevation, r2 = name hash
+# param r0 = azimuth, r1 = elevation, r2 = name hash
 mod r0 r0 360
+sbn SolarPanel r2 Horizontal r0
+sbn SolarPanel r2 Vertical r1
+sbn SolarPanel5 r2 Horizontal r0
+sbn SolarPanel5 r2 Vertical r1
 sbn SolarPanelDual r2 Horizontal r0
 sbn SolarPanelDual r2 Vertical r1
+sbn SolarPanelDual5 r2 Horizontal r0
+sbn SolarPanelDual5 r2 Vertical r1
 sbn SolarPanelHeavyDual r2 Horizontal r0
 sbn SolarPanelHeavyDual r2 Vertical r1
 j ra
