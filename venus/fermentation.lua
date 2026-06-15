@@ -40,7 +40,7 @@ function tick(dt)
 	EVAPORATOR:write_batch(
 		LT.On,
 		bool_to_num(
-			FERMENTER:read_batch(LT.PressureOutput, LBM.Maximum) > 100
+			FERMENTER:read_batch(LT.PressureOutput, LBM.Maximum) > 50
 				and EVAPORATOR:read_batch(LT.PressureOutput, LBM.Maximum) < MAX_GAS_PIPE_PRESSURE
 		)
 	)
