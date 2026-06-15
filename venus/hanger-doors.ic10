@@ -1,0 +1,19 @@
+define PH_LRG_HNGR -1351081801
+define PH_SWITCH 491845673
+define NH_HANGER HASH("Rocket Hanger")
+define NH_SWITCH HASH("Open Hanger")
+alias DoToggle r15
+alias DoorState r14
+
+loop:
+yield
+lbn DoToggle PH_SWITCH NH_SWITCH Setting Maximum
+beqz DoToggle loop
+lbn r0 PH_LRG_HNGR NH_HANGER Open Maximum
+# s db Setting r0
+# sbn PH_LRG_HNGR NH_HANGER Mode 1
+# Toggle doors.
+lbn DoorState PH_LRG_HNGR NH_HANGER Open Maximum
+xor DoorState DoorState 1
+sbn PH_LRG_HNGR NH_HANGER Open DoorState
+j loop
