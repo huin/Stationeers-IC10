@@ -1,14 +1,23 @@
 define PHGS -1252983604
 define PHPA 435685051
 define PHDV -1280984102
+define PHVP -321403609
 define PH_CONDEN 1420719315
 define PH_EVAPOR -1429782576
-define NHAtmosGS HASH("Atmospheric Gas Sensor")
-define NHHeatPA HASH("Heat Pump CC Pipe Analyzer")
-define NHRadiaDV HASH("Radiators Digital Valve")
-define NHHeatPump HASH("Heat Pump")
-define EVAP_TARGET_TEMP 298.15  # 25C
-define EVAP_LOW_TEMP_PRESSURE 1200 # kPa
+define NH_AtmosGS HASH("Atmospheric Gas Sensor")
+define NH_HeatPA HASH("Heat Pump CC Pipe Analyzer")
+define NH_RadiaDV HASH("Radiators Digital Valve")
+define NH_SilaEvap HASH("Silanol Evaporation Chamber")
+define NH_PolEvap HASH("Pollutant Evaporation Chamber")
+define NH_N2Evap HASH("N2 Evaporation Chamber")
+define NH_RadPumpIn HASH("Radiators Pump In")
+define NH_RadPumpOut HASH("Radiators Pump Out")
+define SILANOL_TARGET_TEMP 298.15     # 25C
+define SILANOL_LOW_TEMP_PRESSURE 1200 # kPa
+define POL_TARGET_TEMP 178            # -95.15C
+define POL_LOW_TEMP_PRESSURE 1850     # kPa
+define N2_TARGET_TEMP 65              # -208.15C
+define N2_LOW_TEMP_PRESSURE 50        # kPa
 alias AtmosTemp r0
 alias HeatTemp r1
 alias ValveSet r2
@@ -17,16 +26,29 @@ alias EvapSet r4
 loop:
 # Manage external atmospheric tank temperature.
 # Uses storm cooling.
-lbn AtmosTemp PHGS NHAtmosGS Temperature Average
-lbn HeatTemp PHPA NHHeatPA Temperature Average
+lbn AtmosTemp PHGS NH_AtmosGS Temperature Average
+lbn HeatTemp PHPA NH_HeatPA Temperature Average
 slt ValveSet AtmosTemp HeatTemp
-sbn PHDV NHRadiaDV On ValveSet
+sbn PHDV NH_RadiaDV On ValveSet
+sbn PHVP NH_RadPumpIn On ValveSet
+sbn PHVP NH_RadPumpOut On ValveSet
+
 # Lower target pressure while the evaporator is hot.
 # We don't want it to be low if temperature is low,
 # otherwise we can potentially freeze the coolant.
-lbn EvapTemp PH_EVAPOR NHHeatPump Temperature Minimum
-slt EvapSet EvapTemp EVAP_TARGET_TEMP
-mul EvapSet EvapSet EVAP_LOW_TEMP_PRESSURE
-sbn PH_EVAPOR NHHeatPump Setting EvapSet
+lbn EvapTemp PH_EVAPOR NH_SilaEvap Temperature Minimum
+slt EvapSet EvapTemp SILANOL_TARGET_TEMP
+mul EvapSet EvapSet SILANOL_LOW_TEMP_PRESSURE
+sbn PH_EVAPOR NH_SilaEvap Setting EvapSet
+
+lbn EvapTemp PH_EVAPOR NH_PolEvap Temperature Minimum
+slt EvapSet EvapTemp POL_TARGET_TEMP
+mul EvapSet EvapSet POL_LOW_TEMP_PRESSURE
+sbn PH_EVAPOR NH_PolEvap Setting EvapSet
+
+lbn EvapTemp PH_EVAPOR NH_N2Evap Temperature Minimum
+slt EvapSet EvapTemp N2_TARGET_TEMP
+mul EvapSet EvapSet N2_LOW_TEMP_PRESSURE
+sbn PH_EVAPOR NH_N2Evap Setting EvapSet
 yield
 j loop
