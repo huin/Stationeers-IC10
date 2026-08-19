@@ -1,0 +1,36 @@
+define PHGS -1252983604
+define PHPA 435685051
+define PHDV -1280984102
+define PHVP -321403609
+define PH_CONDEN 1420719315
+define PH_EVAPOR -1429782576
+define NH_AtmosGS HASH("Atmospheric Gas Sensor")
+define NH_HeatPA HASH("Heat Pump CC Pipe Analyzer")
+define NH_SilaEvap HASH("Silanol Evaporation Chamber")
+define NH_RadPumpIn HASH("Radiators Pump In")
+define NH_RadPumpOut HASH("Radiators Pump Out")
+define SILANOL_TARGET_TEMP 298.15     # 25C
+define SILANOL_LOW_TEMP_PRESSURE 1200 # kPa
+alias AtmosTemp r0
+alias HeatTemp r1
+alias ValveSet r2
+alias EvapTemp r3
+alias EvapSet r4
+loop:
+# Manage external atmospheric tank temperature.
+# Uses storm cooling.
+lbn AtmosTemp PHGS NH_AtmosGS Temperature Average
+lbn HeatTemp PHPA NH_HeatPA Temperature Average
+slt ValveSet AtmosTemp HeatTemp
+sbn PHVP NH_RadPumpIn On ValveSet
+sbn PHVP NH_RadPumpOut On ValveSet
+
+# Lower target pressure while the evaporator is hot.
+# We don't want it to be low if temperature is low,
+# otherwise we can potentially freeze the coolant.
+lbn EvapTemp PH_EVAPOR NH_SilaEvap Temperature Minimum
+slt EvapSet EvapTemp SILANOL_TARGET_TEMP
+mul EvapSet EvapSet SILANOL_LOW_TEMP_PRESSURE
+sbn PH_EVAPOR NH_SilaEvap Setting EvapSet
+yield
+j loop
