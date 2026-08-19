@@ -163,6 +163,12 @@ ic.enums.LogicType = {}
 ic.enums.LogicBatchMethod = {}
 --- @type { -- incomplete
 ---   Occupied: LogicSlotType,
+---   OccupantHash: LogicSlotType,
+---   Quantity: LogicSlotType,
+---   Damage: LogicSlotType,
+---   Class: LogicSlotType,
+---   MaxQuantity: LogicSlotType,
+---   PrefabHash: LogicSlotType,
 --- }
 ic.enums.LogicSlotType = {}
 
