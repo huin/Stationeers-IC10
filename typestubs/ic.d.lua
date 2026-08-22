@@ -151,6 +151,7 @@ ic.enums = {}
 ---   RatioWater: LogicType,
 ---   Setting: LogicType,
 ---   Temperature: LogicType,
+---   TemperatureInput: LogicType,
 ---   TemperatureOutput: LogicType,
 --- }
 ic.enums.LogicType = {}

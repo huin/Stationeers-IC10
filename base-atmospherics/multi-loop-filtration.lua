@@ -13,12 +13,15 @@ local PH_FILTRATION = -348054045
 local PH_AIRCON = -2087593337
 local PH_GAS_SENSOR = -1252983604
 local PH_VOLPUMP = -321403609
+local PH_DIGVALVE = -1280984102
 
---- TODO: each filtration thing have a declared correct filter prefab list.
+--- ac_bypass: a digital valve to bypass the AC when its input reaches < 1K
+--- from temperature_k (and therefore would stop running).
 --- @alias Loop {
 ---   name: string,
 ---   filtrations: [PrefabNamed],
 ---   ac: PrefabNamed,
+---   ac_bypass: PrefabNamed,
 ---   temperature_k: number,
 --- }
 
@@ -31,6 +34,7 @@ local LOOPS = {
 			PrefabNamed:create(PH_FILTRATION, "Hab Toxin Filtration"),
 		},
 		ac = PrefabNamed:create(PH_AIRCON, "Hab A/C"),
+		ac_bypass = PrefabNamed:create(PH_DIGVALVE, "Hab A/C Bypass"),
 		temperature_k = util.temp(5, "C", "K"),
 	},
 	{
@@ -40,7 +44,8 @@ local LOOPS = {
 			PrefabNamed:create(PH_FILTRATION, "GH Toxin Filtration"),
 		},
 		ac = PrefabNamed:create(PH_AIRCON, "GH A/C"),
-		temperature_k = util.temp(25, "C", "K"),
+		ac_bypass = PrefabNamed:create(PH_DIGVALVE, "GH A/C Bypass"),
+		temperature_k = util.temp(22, "C", "K"),
 	},
 }
 
@@ -74,6 +79,14 @@ local FEEDS = {
 		logicRatio = LT.RatioCarbonDioxide,
 		lowPPkpa = 30,
 		highPPkpa = 34,
+	},
+	{
+		name = "GH N2",
+		sensor = GH_GAS_SENSOR,
+		feedPump = PrefabNamed:create(PH_VOLPUMP, "GH N2 Feed"),
+		logicRatio = LT.RatioNitrogen,
+		lowPPkpa = 20,
+		highPPkpa = 24,
 	},
 }
 
@@ -126,6 +139,14 @@ end
 --- @param loop Loop
 --- @param ac PrefabNamed
 function handle_ac(loop, ac)
+	local in_temp = ac:read_batch(LT.TemperatureInput, LBM.Average)
+	local disable_ac = math.abs(in_temp - loop.temperature_k) < 1
+	loop.ac_bypass:write_batch(LT.On, bool_to_num(disable_ac))
+	if disable_ac then
+		loop.ac:write_batch(LT.On, 0)
+		return
+	end
+
 	local p1 = ac:read_batch(LT.PressureOutput, LBM.Maximum)
 	if p1 == nil then
 		print(string.format("Loop %s: A/C %s missing or not an A/C.", loop.name, ac.nh))
